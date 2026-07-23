@@ -321,19 +321,9 @@ class _EditCameraScreenState extends State<EditCameraScreen> {
 class LiveViewScreen extends StatelessWidget {
   final Camera camera;
 
-  const LiveViewScreen({required this.camera, super.key});
+  const LiveViewScreen({super.key, required this.camera});
 
   @override
-<<<<<<< HEAD
-  State<LiveViewScreen> createState() => _LiveViewScreenStateVlc();
-}
-
-<<<<<<< HEAD
-=======
-class _LiveViewScreenState extends State<LiveViewScreen> {
-  @override
-=======
->>>>>>> b3232d2 (refactor: corrige tipos, remove async do dispose e ajusta LiveViewScreen)
   Widget build(BuildContext context) {
     if (kIsWeb) {
       return _UnsupportedPlatformPlayer(cameraName: camera.name);
@@ -350,15 +340,10 @@ class _VlcPlayerScreen extends StatefulWidget {
   const _VlcPlayerScreen({required this.camera});
 
   @override
-  State<_VlcPlayerScreen> createState() => _LiveViewScreenStateVlc();
+  State<_VlcPlayerScreen> createState() => _VlcPlayerScreenState();
 }
-<<<<<<< HEAD
->>>>>>> 9cc3fe4 (fix: ajusta tipagem do createState na LiveViewScreen)
-class _LiveViewScreenStateVlc extends State<LiveViewScreen> {
-=======
 
-class _LiveViewScreenStateVlc extends State<_VlcPlayerScreen> {
->>>>>>> b3232d2 (refactor: corrige tipos, remove async do dispose e ajusta LiveViewScreen)
+class _VlcPlayerScreenState extends State<_VlcPlayerScreen> {
   late VlcPlayerController _vlcController;
   bool _isPlayerReady = false;
   bool _wasBuffering = false;
@@ -369,7 +354,7 @@ class _LiveViewScreenStateVlc extends State<_VlcPlayerScreen> {
     super.initState();
     _vlcController = VlcPlayerController.network(
       widget.camera.rtspUrl,
-      hwAcc: HwAcc.full,
+      hwAcc: HwAcc.disabled, // Força processamento via CPU (essencial para VM sem GPU dedicada)
       autoPlay: true,
       options: VlcPlayerOptions(
         advanced: VlcAdvancedOptions([
@@ -388,21 +373,10 @@ class _LiveViewScreenStateVlc extends State<_VlcPlayerScreen> {
 
     bool needsRebuild = false;
 
-<<<<<<< HEAD
     if (_vlcController.value.hasError && _errorMessage.isEmpty) {
       _errorMessage =
           'Erro ao carregar o vídeo. Verifique a URL RTSP e a conexão de rede.\nDetalhes: ${_vlcController.value.errorDescription}';
       needsRebuild = true;
-=======
-    if (_isPlayerReady != _vlcController.value.isInitialized ||
-        _wasBuffering != _vlcController.value.isBuffering ||
-        _errorMessage != newError) {
-      setState(() {
-        _isPlayerReady = _vlcController.value.isInitialized;
-        _wasBuffering = _vlcController.value.isBuffering;
-        _errorMessage = newError;
-      });
->>>>>>> b3232d2 (refactor: corrige tipos, remove async do dispose e ajusta LiveViewScreen)
     }
 
     if (_vlcController.value.isInitialized && !_isPlayerReady) {
@@ -456,6 +430,36 @@ class _LiveViewScreenStateVlc extends State<_VlcPlayerScreen> {
               if (_vlcController.value.isBuffering)
                 const CircularProgressIndicator(color: AppConfig.primaryColor),
             ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Widget exibido quando a plataforma atual não suporta a visualização de vídeo RTSP (ex: Web).
+class _UnsupportedPlatformPlayer extends StatelessWidget {
+  final String cameraName;
+
+  const _UnsupportedPlatformPlayer({required this.cameraName});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(cameraName),
+        backgroundColor: AppConfig.cardColor,
+      ),
+      body: Container(
+        color: Colors.black,
+        child: const Center(
+          child: Padding(
+            padding: EdgeInsets.all(24.0),
+            child: Text(
+              'A visualização de câmeras RTSP não é suportada nesta plataforma (Web).',
+              style: TextStyle(color: Colors.white, fontSize: 16),
+              textAlign: TextAlign.center,
+            ),
           ),
         ),
       ),
