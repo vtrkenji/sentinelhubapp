@@ -1,4 +1,3 @@
-@'
 import 'dart:io';
 import 'package:flutter/foundation.dart' show kIsWeb, defaultTargetPlatform, TargetPlatform;
 import 'package:flutter/material.dart';
@@ -415,4 +414,3 @@ class _LiveViewScreenStateVlc extends State<LiveViewScreen> {
     );
   }
 }
-'@ | Set-Content -Path "C:\projects\sentinelhubapp\lib\main.dart" -Encoding UTF8
