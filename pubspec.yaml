@@ -1,0 +1,23 @@
+name: sentinel_hub
+description: "Sistema de monitoramento e automação Sentinel-Hub"
+publish_to: 'none'
+
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  shared_preferences: ^2.2.2
+  # webview_flutter: ^4.8.0 # Removido pois usaremos VLC
+  flutter_vlc_player: ^7.4.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
+
+flutter:
+  uses-material-design: true
