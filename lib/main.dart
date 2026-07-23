@@ -1,3 +1,4 @@
+@'
 import 'dart:io';
 import 'package:flutter/foundation.dart' show kIsWeb, defaultTargetPlatform, TargetPlatform;
 import 'package:flutter/material.dart';
@@ -173,8 +174,8 @@ class _CameraGridScreenState extends State<CameraGridScreen> {
                           ),
                         ),
                       );
-                      },
-                    );
+                    },
+                  );
                 },
               ),
             ),
@@ -315,36 +316,12 @@ class _EditCameraScreenState extends State<EditCameraScreen> {
 class LiveViewScreen extends StatefulWidget {
   final Camera camera;
 
-  const LiveViewScreen({super.key, required this.camera});
+  const LiveViewScreen({required this.camera, super.key});
 
   @override
-  State<LiveViewScreen> createState() => _LiveViewScreenState();
+  State<LiveViewScreen> createState() => _LiveViewScreenStateVlc();
 }
 
-class _LiveViewScreenState extends State<LiveViewScreen> {
-  @override
-  Widget build(BuildContext context) {
-    // Usa uma constante em tempo de compilação (kIsWeb) para decidir qual widget renderizar.
-    // Isso garante que nenhum código do player VLC seja sequer incluído no build para a web.
-    if (kIsWeb) {
-      return _UnsupportedPlatformPlayer(cameraName: widget.camera.name);
-    } else {
-      // Para todas as outras plataformas suportadas (Windows, Linux, Android, etc.),
-      // usamos o player VLC.
-      return _VlcPlayerScreen(camera: widget.camera);
-    }
-  }
-}
-
-// Um novo widget que encapsula a tela do player VLC.
-class _VlcPlayerScreen extends StatefulWidget {
-  final Camera camera;
-
-  const _VlcPlayerScreen({required this.camera});
-
-  @override
-  State<_VlcPlayerScreen> createState() => _LiveViewScreenStateVlc();
-}
 class _LiveViewScreenStateVlc extends State<LiveViewScreen> {
   late VlcPlayerController _vlcController;
   bool _isPlayerReady = false;
@@ -354,7 +331,7 @@ class _LiveViewScreenStateVlc extends State<LiveViewScreen> {
   @override
   void initState() {
     super.initState();
-    _vlcController = VlcPlayerController.network( //
+    _vlcController = VlcPlayerController.network(
       widget.camera.rtspUrl,
       hwAcc: HwAcc.full,
       autoPlay: true,
@@ -363,7 +340,7 @@ class _LiveViewScreenStateVlc extends State<LiveViewScreen> {
           '--network-caching=2000',
         ]),
         rtp: VlcRtpOptions([
-          '--rtsp-tcp', // Força TCP, mais estável que UDP
+          '--rtsp-tcp',
         ]),
       ),
     );
@@ -373,34 +350,39 @@ class _LiveViewScreenStateVlc extends State<LiveViewScreen> {
   void _playerListener() {
     if (!mounted) return;
 
-    final newError = _vlcController.value.hasError
-        ? 'Erro ao carregar o vídeo. Verifique a URL RTSP e a conexão de rede.\nDetalhes: ${_vlcController.value.errorDescription}'
-        : '';
+    bool needsRebuild = false;
 
-    // Rebuild only if the player readiness, buffering state, or error message changes.
-    if (_isPlayerReady != _vlcController.value.isInitialized ||
-        _wasBuffering != _vlcController.value.isBuffering ||
-        _errorMessage != newError) {
-      setState(() {
-        _isPlayerReady = _vlcController.value.isInitialized;
-        _wasBuffering = _vlcController.value.isBuffering;
-        _errorMessage = newError;
-      });
+    if (_vlcController.value.hasError && _errorMessage.isEmpty) {
+      _errorMessage =
+          'Erro ao carregar o vídeo. Verifique a URL RTSP e a conexão de rede.\nDetalhes: ${_vlcController.value.errorDescription}';
+      needsRebuild = true;
     }
+
+    if (_vlcController.value.isInitialized && !_isPlayerReady) {
+      _isPlayerReady = true;
+      needsRebuild = true;
+    }
+
+    if (_vlcController.value.isBuffering != _wasBuffering) {
+      _wasBuffering = _vlcController.value.isBuffering;
+      needsRebuild = true;
+    }
+
+    if (needsRebuild) setState(() {});
   }
 
   @override
-  void dispose() async {
+  void dispose() {
     _vlcController.removeListener(_playerListener);
-    await _vlcController.stop();
-    await _vlcController.dispose();
+    _vlcController.stop();
+    _vlcController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar( //
+      appBar: AppBar(
         title: Text(widget.camera.name),
         backgroundColor: AppConfig.cardColor,
       ),
@@ -433,33 +415,4 @@ class _LiveViewScreenStateVlc extends State<LiveViewScreen> {
     );
   }
 }
-
-/// Widget exibido quando a plataforma atual não suporta a visualização de vídeo RTSP (ex: Web).
-class _UnsupportedPlatformPlayer extends StatelessWidget {
-  final String cameraName;
-
-  const _UnsupportedPlatformPlayer({required this.cameraName});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(cameraName),
-        backgroundColor: AppConfig.cardColor,
-      ),
-      body: Container(
-        color: Colors.black,
-        child: const Center(
-          child: Padding(
-            padding: EdgeInsets.all(24.0),
-            child: Text(
-              'A visualização de câmeras RTSP não é suportada nesta plataforma (Web).',
-              style: TextStyle(color: Colors.white, fontSize: 16),
-              textAlign: TextAlign.center,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
+'@ | Set-Content -Path "C:\projects\sentinelhubapp\lib\main.dart" -Encoding UTF8
