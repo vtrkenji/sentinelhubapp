@@ -1,8 +1,9 @@
 import 'dart:io';
-import 'package:flutter/foundation.dart' show kIsWeb, defaultTargetPlatform, TargetPlatform;
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_vlc_player/flutter_vlc_player.dart';
+import 'package:dart_vlc/dart_vlc.dart';
 
 // --- CONFIGURAÇÕES PADRÃO ---
 class AppConfig {
@@ -59,6 +60,9 @@ class CameraService {
 }
 
 void main() {
+  if (!kIsWeb && (Platform.isWindows || Platform.isLinux)) {
+    DartVLC.initialize();
+  }
   runApp(const SentinelApp());
 }
 
@@ -325,11 +329,86 @@ class LiveViewScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (kIsWeb) {
+    if (kIsWeb || Platform.isMacOS) {
       return _UnsupportedPlatformPlayer(cameraName: camera.name);
-    } else {
-      return _VlcPlayerScreen(camera: camera);
     }
+    if (Platform.isWindows || Platform.isLinux) {
+      return _DesktopVlcPlayerScreen(camera: camera);
+    }
+    return _VlcPlayerScreen(camera: camera);
+  }
+}
+
+// Widget privado para player desktop com dart_vlc
+class _DesktopVlcPlayerScreen extends StatefulWidget {
+  final Camera camera;
+
+  const _DesktopVlcPlayerScreen({required this.camera});
+
+  @override
+  State<_DesktopVlcPlayerScreen> createState() => _DesktopVlcPlayerScreenState();
+}
+
+class _DesktopVlcPlayerScreenState extends State<_DesktopVlcPlayerScreen> {
+  late Player _player;
+  String _errorMessage = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _player = Player(id: 0, commandlineArguments: ['--rtsp-tcp']);
+    _player.generalStream.listen((event) {
+      // General stream provides volume/rate updates.
+    }, onError: (error) {
+      if (!mounted) return;
+      setState(() {
+        _errorMessage = 'Erro ao carregar o vídeo RTSP no desktop: $error';
+      });
+    });
+
+    try {
+      final media = Media.network(widget.camera.rtspUrl, parse: true);
+      _player.open(media, autoStart: true);
+    } catch (error) {
+      _errorMessage = 'Erro ao abrir RTSP: $error';
+    }
+  }
+
+  @override
+  void dispose() {
+    _player.stop();
+    _player.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(widget.camera.name),
+        backgroundColor: AppConfig.cardColor,
+      ),
+      body: Container(
+        color: Colors.black,
+        child: Center(
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              Video(player: _player, fit: BoxFit.contain),
+              if (_errorMessage.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.all(20.0),
+                  child: Text(
+                    _errorMessage,
+                    style: const TextStyle(color: Colors.white, backgroundColor: Colors.black54, fontSize: 16),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }
 
@@ -456,7 +535,7 @@ class _UnsupportedPlatformPlayer extends StatelessWidget {
           child: Padding(
             padding: EdgeInsets.all(24.0),
             child: Text(
-              'A visualização de câmeras RTSP não é suportada nesta plataforma (Web).',
+              'A visualização de câmeras RTSP não é suportada nesta plataforma. Use Android ou iOS para o player VLC.',
               style: TextStyle(color: Colors.white, fontSize: 16),
               textAlign: TextAlign.center,
             ),
