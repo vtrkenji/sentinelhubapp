@@ -241,6 +241,12 @@ class _EditCameraScreenState extends State<EditCameraScreen> {
     _urlController = TextEditingController(text: widget.camera.rtspUrl);
   }
 
+  @override
+  void dispose() {
+    _urlController.dispose();
+    super.dispose();
+  }
+
   Future<void> _saveUrl() async {
     if (_formKey.currentState?.validate() ?? false) {
       final prefs = await SharedPreferences.getInstance();
@@ -312,12 +318,13 @@ class _EditCameraScreenState extends State<EditCameraScreen> {
 }
 
 // --- TELA DE PLAYER MULTIPLATAFORMA INTELIGENTE ---
-class LiveViewScreen extends StatefulWidget {
+class LiveViewScreen extends StatelessWidget {
   final Camera camera;
 
   const LiveViewScreen({required this.camera, super.key});
 
   @override
+<<<<<<< HEAD
   State<LiveViewScreen> createState() => _LiveViewScreenStateVlc();
 }
 
@@ -325,30 +332,33 @@ class LiveViewScreen extends StatefulWidget {
 =======
 class _LiveViewScreenState extends State<LiveViewScreen> {
   @override
+=======
+>>>>>>> b3232d2 (refactor: corrige tipos, remove async do dispose e ajusta LiveViewScreen)
   Widget build(BuildContext context) {
-    // Usa uma constante em tempo de compilação (kIsWeb) para decidir qual widget renderizar.
-    // Isso garante que nenhum código do player VLC seja sequer incluído no build para a web.
     if (kIsWeb) {
-      return _UnsupportedPlatformPlayer(cameraName: widget.camera.name);
+      return _UnsupportedPlatformPlayer(cameraName: camera.name);
     } else {
-      // Para todas as outras plataformas suportadas (Windows, Linux, Android, etc.),
-      // usamos o player VLC.
-      return _VlcPlayerScreen(camera: widget.camera);
+      return _VlcPlayerScreen(camera: camera);
     }
   }
 }
 
-// Um novo widget que encapsula a tela do player VLC.
+// Widget privado que encapsula o player VLC
 class _VlcPlayerScreen extends StatefulWidget {
   final Camera camera;
 
   const _VlcPlayerScreen({required this.camera});
 
   @override
-  State<LiveViewScreen> createState() => _LiveViewScreenStateVlc();
+  State<_VlcPlayerScreen> createState() => _LiveViewScreenStateVlc();
 }
+<<<<<<< HEAD
 >>>>>>> 9cc3fe4 (fix: ajusta tipagem do createState na LiveViewScreen)
 class _LiveViewScreenStateVlc extends State<LiveViewScreen> {
+=======
+
+class _LiveViewScreenStateVlc extends State<_VlcPlayerScreen> {
+>>>>>>> b3232d2 (refactor: corrige tipos, remove async do dispose e ajusta LiveViewScreen)
   late VlcPlayerController _vlcController;
   bool _isPlayerReady = false;
   bool _wasBuffering = false;
@@ -378,10 +388,21 @@ class _LiveViewScreenStateVlc extends State<LiveViewScreen> {
 
     bool needsRebuild = false;
 
+<<<<<<< HEAD
     if (_vlcController.value.hasError && _errorMessage.isEmpty) {
       _errorMessage =
           'Erro ao carregar o vídeo. Verifique a URL RTSP e a conexão de rede.\nDetalhes: ${_vlcController.value.errorDescription}';
       needsRebuild = true;
+=======
+    if (_isPlayerReady != _vlcController.value.isInitialized ||
+        _wasBuffering != _vlcController.value.isBuffering ||
+        _errorMessage != newError) {
+      setState(() {
+        _isPlayerReady = _vlcController.value.isInitialized;
+        _wasBuffering = _vlcController.value.isBuffering;
+        _errorMessage = newError;
+      });
+>>>>>>> b3232d2 (refactor: corrige tipos, remove async do dispose e ajusta LiveViewScreen)
     }
 
     if (_vlcController.value.isInitialized && !_isPlayerReady) {
