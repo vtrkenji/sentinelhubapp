@@ -321,6 +321,33 @@ class LiveViewScreen extends StatefulWidget {
   State<LiveViewScreen> createState() => _LiveViewScreenStateVlc();
 }
 
+<<<<<<< HEAD
+=======
+class _LiveViewScreenState extends State<LiveViewScreen> {
+  @override
+  Widget build(BuildContext context) {
+    // Usa uma constante em tempo de compilação (kIsWeb) para decidir qual widget renderizar.
+    // Isso garante que nenhum código do player VLC seja sequer incluído no build para a web.
+    if (kIsWeb) {
+      return _UnsupportedPlatformPlayer(cameraName: widget.camera.name);
+    } else {
+      // Para todas as outras plataformas suportadas (Windows, Linux, Android, etc.),
+      // usamos o player VLC.
+      return _VlcPlayerScreen(camera: widget.camera);
+    }
+  }
+}
+
+// Um novo widget que encapsula a tela do player VLC.
+class _VlcPlayerScreen extends StatefulWidget {
+  final Camera camera;
+
+  const _VlcPlayerScreen({required this.camera});
+
+  @override
+  State<LiveViewScreen> createState() => _LiveViewScreenStateVlc();
+}
+>>>>>>> 9cc3fe4 (fix: ajusta tipagem do createState na LiveViewScreen)
 class _LiveViewScreenStateVlc extends State<LiveViewScreen> {
   late VlcPlayerController _vlcController;
   bool _isPlayerReady = false;
