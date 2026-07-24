@@ -11,9 +11,10 @@ dependencies:
   flutter:
     sdk: flutter
   shared_preferences: ^2.2.2
-  # webview_flutter: ^4.8.0 # Removido pois usaremos VLC
-  flutter_vlc_player: ^7.4.0
-  dart_vlc: ^0.4.0
+  http: ^1.2.1
+  media_kit: 1.1.10
+  media_kit_video: 1.2.4
+  media_kit_libs_video: 1.0.4
 
 dev_dependencies:
   flutter_test:
