@@ -4,16 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_vlc_player/flutter_vlc_player.dart';
 import 'package:dart_vlc/dart_vlc.dart';
-
-// --- CONFIGURAÇÕES PADRÃO ---
-class AppConfig {
-  static const String defaultDvrUrl = 'rtsp://vtr:REMOVIDO@sentinelhub.ddns.net:554/cam/realmonitor?channel=1&subtype=1';
-  static const String defaultIpCamUrl = 'rtsp://admin:REMOVIDO@192.168.15.19:8554/h264Preview_01_main';
-
-  static const Color primaryColor = Color(0xFF00E5FF);
-  static const Color backgroundColor = Color(0xFF0F111A);
-  static const Color cardColor = Color(0xFF1F2233);
-}
+import 'package:sentinelhubapp/screens/settings_screen.dart';
+import 'package:sentinelhubapp/config/app_config.dart';
 
 // --- MODELO DE CÂMERA ---
 class Camera {
@@ -60,8 +52,16 @@ class CameraService {
 }
 
 void main() {
-  if (!kIsWeb && (Platform.isWindows || Platform.isLinux)) {
-    DartVLC.initialize();
+  // Garante que os bindings do Flutter estejam prontos antes de qualquer outra coisa.
+  WidgetsFlutterBinding.ensureInitialized();
+  try {
+    if (!kIsWeb && (Platform.isWindows || Platform.isLinux)) {
+      DartVLC.initialize();
+    }
+  } catch (e) {
+    // Se a inicialização do VLC falhar, imprima um erro claro.
+    // Isso é útil para diagnosticar a falta de bibliotecas nativas.
+    debugPrint('ERRO: Falha ao inicializar o DartVLC. Verifique se as bibliotecas do VLC estão instaladas. Detalhes: $e');
   }
   runApp(const SentinelApp());
 }
@@ -107,6 +107,21 @@ class _CameraGridScreenState extends State<CameraGridScreen> {
       appBar: AppBar(
         title: const Text('SENTINEL-HUB // MONITOR'),
         backgroundColor: AppConfig.cardColor,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.settings_outlined),
+            tooltip: 'Configurações Gerais',
+            onPressed: () async {
+              final result = await Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const SettingsScreen()),
+              );
+              if (result == true && mounted) {
+                setState(() => _camerasFuture = _cameraService.getCamerasDynamic());
+              }
+            },
+          ),
+        ],
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -351,19 +366,32 @@ class _DesktopVlcPlayerScreen extends StatefulWidget {
 
 class _DesktopVlcPlayerScreenState extends State<_DesktopVlcPlayerScreen> {
   late Player _player;
+  bool _isPlaying = false;
   String _errorMessage = '';
 
   @override
   void initState() {
     super.initState();
-    _player = Player(id: 0, commandlineArguments: ['--rtsp-tcp']);
-    _player.generalStream.listen((event) {
-      // General stream provides volume/rate updates.
-    }, onError: (error) {
+    // Usamos um ID único para evitar conflitos e adicionamos argumentos para estabilidade.
+    _player = Player(id: widget.camera.id, commandlineArguments: [
+      '--rtsp-tcp', // Força TCP para RTSP, mais confiável que UDP.
+      '--network-caching=2000', // Aumenta o buffer de rede.
+      '--sout-keep', // Mantém a stream ativa.
+    ]);
+
+    // Ouve o stream de playback, que é mais confiável para detectar erros e estados.
+    _player.playbackStream.listen((event) {
       if (!mounted) return;
       setState(() {
-        _errorMessage = 'Erro ao carregar o vídeo RTSP no desktop: $error';
+        // Atualiza o estado de reprodução com base no evento.
+        _isPlaying = event.isPlaying;
+        if (event.isCompleted) {
+          _errorMessage = 'O stream de vídeo foi finalizado inesperadamente.';
+        }
       });
+    }, onError: (error) {
+      // Captura erros que ocorrem durante o playback.
+      if (mounted) setState(() => _errorMessage = 'Erro no playback: $error');
     });
 
     try {
@@ -376,25 +404,34 @@ class _DesktopVlcPlayerScreenState extends State<_DesktopVlcPlayerScreen> {
 
   @override
   void dispose() {
-    _player.stop();
-    _player.dispose();
+    // A ordem correta e segura de descarte.
+    try {
+      _player.dispose();
+    } catch (e) {
+      debugPrint('Erro ao descartar o player: $e');
+    }
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text(widget.camera.name),
-        backgroundColor: AppConfig.cardColor,
-      ),
-      body: Container(
+      body: Container( // A AppBar foi removida para evitar conflitos de renderização no Linux.
         color: Colors.black,
         child: Center(
           child: Stack(
             alignment: Alignment.center,
             children: [
-              Video(player: _player, fit: BoxFit.contain),
+              // Só exibe o vídeo se o player estiver ativo e sem erros.
+              if (_errorMessage.isEmpty)
+                // AbsorbPointer previne que eventos do mouse (cliques, movimentos)
+                // cheguem à camada nativa do player, evitando crashes relacionados
+                // a bugs de interação no Linux.
+                AbsorbPointer(
+                  child: Video(player: _player, fit: BoxFit.contain),
+                ),
+              if (!_isPlaying && _errorMessage.isEmpty)
+                const CircularProgressIndicator(color: AppConfig.primaryColor),
               if (_errorMessage.isNotEmpty)
                 Padding(
                   padding: const EdgeInsets.all(20.0),
@@ -404,6 +441,37 @@ class _DesktopVlcPlayerScreenState extends State<_DesktopVlcPlayerScreen> {
                     textAlign: TextAlign.center,
                   ),
                 ),
+              // Botão de voltar customizado e seguro, sobreposto ao vídeo.
+              // O widget Material cria uma superfície de desenho separada,
+              // ajudando a isolar o botão do player de vídeo nativo.
+              Positioned(
+                top: 10,
+                left: 10,
+                child: Material(
+                  color: Colors.transparent,
+                  child: IconButton(
+                    icon: const Icon(Icons.arrow_back, color: Colors.white),
+                    tooltip: 'Voltar',
+                    style: IconButton.styleFrom(
+                      backgroundColor: Colors.black.withOpacity(0.5),
+                    ),
+                    onPressed: () async {
+                      // Solução definitiva para o crash no Linux:
+                      // 1. Descarta o player de vídeo nativo de forma segura.
+                      // 2. Aguarda um breve momento para o descarte nativo ocorrer.
+                      // 3. Navega para a tela anterior.
+                      // Isso evita conflitos de renderização entre a UI do Flutter e a view nativa.
+                      try {
+                        _player.dispose(); // Inicia o descarte (é um método void).
+                        // Adiciona um pequeno atraso para garantir que a camada nativa processe o dispose.
+                        await Future.delayed(const Duration(milliseconds: 100));
+                      } finally {
+                        if (mounted) Navigator.of(context).pop();
+                      }
+                    },
+                  ),
+                ),
+              ),
             ],
           ),
         ),
@@ -431,51 +499,52 @@ class _VlcPlayerScreenState extends State<_VlcPlayerScreen> {
   @override
   void initState() {
     super.initState();
-    _vlcController = VlcPlayerController.network(
-      widget.camera.rtspUrl,
-      hwAcc: HwAcc.disabled, // Força processamento via CPU (essencial para VM sem GPU dedicada)
-      autoPlay: true,
-      options: VlcPlayerOptions(
-        advanced: VlcAdvancedOptions([
-          '--network-caching=2000',
-        ]),
-        rtp: VlcRtpOptions([
-          '--rtsp-tcp',
-        ]),
-      ),
-    );
-    _vlcController.addListener(_playerListener);
+    // Envolve a inicialização em um try-catch para capturar erros que podem causar crash.
+    try {
+      _vlcController = VlcPlayerController.network(
+        widget.camera.rtspUrl,
+        hwAcc: HwAcc.auto, // Usar 'auto' é mais flexível para dispositivos reais. 'disabled' é bom para VMs.
+        autoPlay: true,
+        options: VlcPlayerOptions(
+          advanced: VlcAdvancedOptions([
+            '--network-caching=2000', // Aumenta o buffer de rede para suavizar o stream.
+          ]),
+          rtp: VlcRtpOptions([
+            '--rtsp-tcp', // Força o uso de TCP para RTSP, mais confiável que UDP em redes instáveis.
+          ]),
+        ),
+      );
+      _vlcController.addListener(_playerListener);
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _errorMessage = 'Erro crítico ao inicializar o player: $e';
+        });
+      }
+    }
   }
 
   void _playerListener() {
     if (!mounted) return;
 
-    bool needsRebuild = false;
-
-    if (_vlcController.value.hasError && _errorMessage.isEmpty) {
-      _errorMessage =
-          'Erro ao carregar o vídeo. Verifique a URL RTSP e a conexão de rede.\nDetalhes: ${_vlcController.value.errorDescription}';
-      needsRebuild = true;
-    }
-
-    if (_vlcController.value.isInitialized && !_isPlayerReady) {
-      _isPlayerReady = true;
-      needsRebuild = true;
-    }
-
-    if (_vlcController.value.isBuffering != _wasBuffering) {
+    // Simplifica o listener para ser mais direto e evitar múltiplas lógicas de rebuild.
+    setState(() {
+      _isPlayerReady = _vlcController.value.isInitialized;
       _wasBuffering = _vlcController.value.isBuffering;
-      needsRebuild = true;
-    }
-
-    if (needsRebuild) setState(() {});
+      if (_vlcController.value.hasError && _errorMessage.isEmpty) {
+        _errorMessage =
+            'Erro ao carregar o vídeo. Verifique a URL RTSP e a conexão de rede.\nDetalhes: ${_vlcController.value.errorDescription}';
+      }
+    });
   }
 
   @override
-  void dispose() {
+  Future<void> dispose() async {
     _vlcController.removeListener(_playerListener);
-    _vlcController.stop();
-    _vlcController.dispose();
+    if (await _vlcController.isPlaying() ?? false) {
+      await _vlcController.stop();
+    }
+    await _vlcController.dispose();
     super.dispose();
   }
 
@@ -491,12 +560,15 @@ class _VlcPlayerScreenState extends State<_VlcPlayerScreen> {
         child: Center(
           child: Stack(
             alignment: Alignment.center,
-            children: [
-              VlcPlayer(
-                controller: _vlcController,
-                aspectRatio: 16 / 9,
-                placeholder: const Center(child: CircularProgressIndicator(color: AppConfig.primaryColor)),
-              ),
+            children: [              
+              if (_errorMessage.isEmpty)
+                VlcPlayer(
+                  controller: _vlcController,
+                  aspectRatio: 16 / 9,
+                  placeholder: const Center(child: CircularProgressIndicator(color: AppConfig.primaryColor)),
+                )
+              else if (!_isPlayerReady)
+                const Center(child: Icon(Icons.videocam_off, color: Colors.grey, size: 50)),
               if (_errorMessage.isNotEmpty)
                 Padding(
                   padding: const EdgeInsets.all(20.0),
@@ -506,7 +578,7 @@ class _VlcPlayerScreenState extends State<_VlcPlayerScreen> {
                     textAlign: TextAlign.center,
                   ),
                 ),
-              if (_vlcController.value.isBuffering)
+              if (_wasBuffering && _errorMessage.isEmpty)
                 const CircularProgressIndicator(color: AppConfig.primaryColor),
             ],
           ),
@@ -535,7 +607,7 @@ class _UnsupportedPlatformPlayer extends StatelessWidget {
           child: Padding(
             padding: EdgeInsets.all(24.0),
             child: Text(
-              'A visualização de câmeras RTSP não é suportada nesta plataforma. Use Android ou iOS para o player VLC.',
+              'A visualização de câmeras RTSP não é suportada nesta plataforma (Web/macOS). Use Android, iOS, Windows ou Linux.',
               style: TextStyle(color: Colors.white, fontSize: 16),
               textAlign: TextAlign.center,
             ),
