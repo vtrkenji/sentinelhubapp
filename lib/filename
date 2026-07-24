@@ -4,8 +4,16 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_vlc_player/flutter_vlc_player.dart';
 import 'package:dart_vlc/dart_vlc.dart';
-import 'package:sentinelhubapp/screens/settings_screen.dart';
-import 'package:sentinelhubapp/config/app_config.dart';
+
+// --- CONFIGURAÇÕES PADRÃO ---
+class AppConfig {
+  static const String defaultDvrUrl = 'rtsp://vtr:vitor6721@sentinelhub.ddns.net:554/cam/realmonitor?channel=1&subtype=1';
+  static const String defaultIpCamUrl = 'rtsp://admin:admin123456@192.168.15.19:8554/h264Preview_01_main';
+
+  static const Color primaryColor = Color(0xFF00E5FF);
+  static const Color backgroundColor = Color(0xFF0F111A);
+  static const Color cardColor = Color(0xFF1F2233);
+}
 
 // --- MODELO DE CÂMERA ---
 class Camera {
@@ -107,21 +115,6 @@ class _CameraGridScreenState extends State<CameraGridScreen> {
       appBar: AppBar(
         title: const Text('SENTINEL-HUB // MONITOR'),
         backgroundColor: AppConfig.cardColor,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.settings_outlined),
-            tooltip: 'Configurações Gerais',
-            onPressed: () async {
-              final result = await Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => const SettingsScreen()),
-              );
-              if (result == true && mounted) {
-                setState(() => _camerasFuture = _cameraService.getCamerasDynamic());
-              }
-            },
-          ),
-        ],
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -368,6 +361,7 @@ class _DesktopVlcPlayerScreenState extends State<_DesktopVlcPlayerScreen> {
   late Player _player;
   bool _isPlaying = false;
   String _errorMessage = '';
+  bool _isDisposing = false; // Flag para garantir que o dispose seja chamado apenas uma vez.
 
   @override
   void initState() {
@@ -402,14 +396,23 @@ class _DesktopVlcPlayerScreenState extends State<_DesktopVlcPlayerScreen> {
     }
   }
 
-  @override
-  void dispose() {
-    // A ordem correta e segura de descarte.
+  /// Função centralizada e segura para descartar o player.
+  Future<void> _disposePlayer() async {
+    if (_isDisposing) return; // Se já está em processo, não faz nada.
+    _isDisposing = true;
+
     try {
       _player.dispose();
+      // Adiciona um pequeno atraso para dar tempo à camada nativa.
+      await Future.delayed(const Duration(milliseconds: 100));
     } catch (e) {
       debugPrint('Erro ao descartar o player: $e');
     }
+  }
+
+  @override
+  void dispose() {
+    _disposePlayer(); // Chama a função de descarte segura.
     super.dispose();
   }
 
@@ -444,31 +447,28 @@ class _DesktopVlcPlayerScreenState extends State<_DesktopVlcPlayerScreen> {
               // Botão de voltar customizado e seguro, sobreposto ao vídeo.
               // O widget Material cria uma superfície de desenho separada,
               // ajudando a isolar o botão do player de vídeo nativo.
+              // Trocado IconButton por GestureDetector para a abordagem mais minimalista
+              // e estável possível no Linux, evitando qualquer tipo de repintura ou
+              // gerenciamento de estado de "hover" que causa o crash.
               Positioned(
                 top: 10,
                 left: 10,
-                child: Material(
-                  color: Colors.transparent,
-                  child: IconButton(
-                    icon: const Icon(Icons.arrow_back, color: Colors.white),
-                    tooltip: 'Voltar',
-                    style: IconButton.styleFrom(
-                      backgroundColor: Colors.black.withOpacity(0.5),
+                child: GestureDetector(
+                  onTap: () async {
+                    // 1. Chama a função segura para descartar o player.
+                    await _disposePlayer();
+                    // 2. SOMENTE DEPOIS, navega para a tela anterior.
+                    if (mounted) {
+                      Navigator.of(context).pop();
+                    }
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.all(8.0),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withOpacity(0.5),
+                      shape: BoxShape.circle,
                     ),
-                    onPressed: () async {
-                      // Solução definitiva para o crash no Linux:
-                      // 1. Descarta o player de vídeo nativo de forma segura.
-                      // 2. Aguarda um breve momento para o descarte nativo ocorrer.
-                      // 3. Navega para a tela anterior.
-                      // Isso evita conflitos de renderização entre a UI do Flutter e a view nativa.
-                      try {
-                        _player.dispose(); // Inicia o descarte (é um método void).
-                        // Adiciona um pequeno atraso para garantir que a camada nativa processe o dispose.
-                        await Future.delayed(const Duration(milliseconds: 100));
-                      } finally {
-                        if (mounted) Navigator.of(context).pop();
-                      }
-                    },
+                    child: const Icon(Icons.arrow_back, color: Colors.white),
                   ),
                 ),
               ),
