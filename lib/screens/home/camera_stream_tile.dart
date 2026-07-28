@@ -5,8 +5,13 @@ import '../../models/camera.dart';
 
 class CameraStreamTile extends StatefulWidget {
   final Camera camera;
+  final VoidCallback onConfigure;
 
-  const CameraStreamTile({required this.camera, super.key});
+  const CameraStreamTile({
+    required this.camera,
+    required this.onConfigure,
+    super.key,
+  });
 
   @override
   State<CameraStreamTile> createState() => _CameraStreamTileState();
@@ -15,12 +20,13 @@ class CameraStreamTile extends StatefulWidget {
 class _CameraStreamTileState extends State<CameraStreamTile> {
   Player? _player;
   VideoController? _videoController;
+
   bool _isPlaying = false;
-  bool _isConnecting = false; // To show a loading indicator on the button
+  bool _isConnecting = false;
+  bool _hasError = false;
 
   @override
   void dispose() {
-    // Apenas libera os recursos do player de forma síncrona.
     _player?.dispose();
     super.dispose();
   }
@@ -28,55 +34,70 @@ class _CameraStreamTileState extends State<CameraStreamTile> {
   Future<void> _connect() async {
     if (_isPlaying || _isConnecting) return;
 
+    if (!widget.camera.isActive) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Câmera inativa. Ative-a nas configurações.')),
+      );
+      return;
+    }
+    
     setState(() {
       _isConnecting = true;
+      _hasError = false;
     });
 
     try {
-      // 1. Instancia o player e o controller
-      _player = Player(
-        configuration: const PlayerConfiguration(
-          logLevel: MPVLogLevel.warn,
-          bufferSize: 1024 * 1024, // 1 MB
-          libass: false,
-        ),
-      );
+      _player = Player(configuration: const PlayerConfiguration(logLevel: MPVLogLevel.warn));
       _videoController = VideoController(
         _player!,
         configuration: const VideoControllerConfiguration(
+          // FIX: Desativa a aceleração por hardware para evitar crashes de driver no Linux.
+          // A renderização via software (CPU) é mais estável para streams de baixa FPS.
           enableHardwareAcceleration: false,
         ),
       );
 
-      // 2. Aplica os parâmetros via CPU (sem CUDA)
+      // Prioriza a stream secundária para a grade
+      final streamUrl = widget.camera.rtspUrlSecondary?.isNotEmpty == true
+          ? widget.camera.rtspUrlSecondary!
+          : widget.camera.rtspUrl;
+
+      if (streamUrl.isEmpty) {
+        throw Exception('Nenhuma URL RTSP válida configurada.');
+      }
+      
+      // FIX: Evita crash da thread de renderização no Linux
       if (_player!.platform is NativePlayer) {
-        final native = _player!.platform as NativePlayer;
-        await native.setProperty('hwdec', 'no');
-        await native.setProperty('rtsp_transport', 'tcp');
-        await native.setProperty('network-caching', '100');
+        await (_player!.platform as NativePlayer).setProperty('hwdec', 'auto-safe');
       }
 
-      // 3. Abre a stream RTSP
-      await _player!.open(Media(widget.camera.rtspUrl), play: true);
+      _player!.stream.error.listen((error) {
+        debugPrint('Erro no player da câmera ${widget.camera.name}: $error');
+        if (!mounted) return;
+        // Garante que a atualização de estado ocorra na thread da UI
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) {
+            setState(() => _hasError = true);
+          }
+        });
+      });
       
-      // 4. Atualiza o estado para exibir o vídeo
-      if (!mounted) return;
-      setState(() {
-        _isPlaying = true;
-        _isConnecting = false;
-      });
+      await _player!.open(Media(streamUrl), play: true);
 
+      if (mounted) {
+        setState(() {
+          _isPlaying = true;
+          _isConnecting = false;
+        });
+      }
     } catch (e) {
-      debugPrint('Erro ao inicializar o player RTSP: $e');
-      if (!mounted) return;
-      // Em caso de erro, reverte o estado
-      setState(() {
-        _isConnecting = false;
-      });
-      // Opcional: mostrar um snackbar ou um dialog de erro
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Erro ao conectar à câmera: ${e.toString()}')),
-      );
+      if (mounted) {
+        setState(() {
+          _hasError = true;
+          _isConnecting = false;
+          _isPlaying = false;
+        });
+      }
     }
   }
 
@@ -97,6 +118,10 @@ class _CameraStreamTileState extends State<CameraStreamTile> {
     return Card(
       clipBehavior: Clip.antiAlias,
       color: Colors.black,
+      shape: RoundedRectangleBorder(
+        side: const BorderSide(color: Colors.white12, width: 1),
+        borderRadius: BorderRadius.circular(8),
+      ),
       child: _isPlaying && _videoController != null
           ? _buildPlayerView()
           : _buildConnectView(),
@@ -104,123 +129,139 @@ class _CameraStreamTileState extends State<CameraStreamTile> {
   }
 
   Widget _buildConnectView() {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.videocam_off_outlined, size: 48, color: Colors.white.withOpacity(0.7)),
-            const SizedBox(height: 16),
-            Text(
-              widget.camera.name,
-              style: const TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-                fontSize: 16,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 24),
-            ElevatedButton.icon(
-              onPressed: _isConnecting ? null : _connect,
-              icon: _isConnecting
-                  ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Icon(Icons.play_arrow),
-              label: Text(_isConnecting ? 'Conectando...' : 'Conectar Câmera'),
-              style: ElevatedButton.styleFrom(
-                foregroundColor: Colors.white,
-                backgroundColor: Theme.of(context).colorScheme.primary,
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildPlayerView() {
-    return Stack(
-      alignment: Alignment.topLeft,
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        StreamBuilder<Object>(
-          stream: _player!.stream.error,
-          builder: (context, errorSnapshot) {
-            if (errorSnapshot.hasData) {
-              return _buildErrorWidget(errorSnapshot.data.toString());
-            }
-            return StreamBuilder<bool>(
-              stream: _player!.stream.buffering,
-              builder: (context, bufferingSnapshot) {
-                final isBuffering = bufferingSnapshot.data ?? true;
-                return Stack(
-                  alignment: Alignment.center,
-                  children: [
-                    Video(controller: _videoController!, fit: BoxFit.cover),
-                    if (isBuffering) const CircularProgressIndicator(),
-                  ],
-                );
-              },
-            );
-          },
+        Icon(
+          _hasError ? Icons.error_outline : Icons.videocam_off_outlined,
+          color: _hasError ? Colors.red : Colors.white70,
+          size: 40,
         ),
-        // Botão para desconectar
-        Positioned(
-          top: 8,
-          right: 8,
-          child: IconButton(
-            icon: const Icon(Icons.stop_circle_outlined, color: Colors.white),
-            onPressed: _disconnect,
-            style: IconButton.styleFrom(
-              backgroundColor: Colors.black.withOpacity(0.5),
-            ),
-          ),
+        const SizedBox(height: 8),
+        Text(
+          widget.camera.name,
+          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+          textAlign: TextAlign.center,
         ),
-        // Overlay com o nome da câmera
-        Positioned(
-          bottom: 0,
-          left: 0,
-          right: 0,
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
-            color: Colors.black.withOpacity(0.6),
-            child: Text(
-              widget.camera.name,
-              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
+        const SizedBox(height: 4),
+        if (_hasError)
+          const Text('Erro de conexão', style: TextStyle(color: Colors.red, fontSize: 12)),
+        const SizedBox(height: 12),
+        ElevatedButton.icon(
+          onPressed: _isConnecting ? null : _connect,
+          icon: _isConnecting
+              ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
+              : const Icon(Icons.play_arrow, size: 18),
+          label: Text(_isConnecting ? 'Conectando...' : 'Conectar Câmera'),
+          style: ElevatedButton.styleFrom(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            textStyle: const TextStyle(fontSize: 12)
           ),
         ),
       ],
     );
   }
 
-  Widget _buildErrorWidget(String errorMessage) {
-    // Reutiliza o view de conexão com uma mensagem de erro
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const Icon(Icons.error_outline, color: Colors.red, size: 48),
-          const SizedBox(height: 8),
-          Text(
-            'Erro ao carregar stream',
-            style: TextStyle(color: Colors.white.withOpacity(0.8)),
-            textAlign: TextAlign.center,
+  Widget _buildPlayerView() {
+    return Stack(
+      alignment: Alignment.center,
+      children: [
+        Video(controller: _videoController!, fit: BoxFit.cover),
+        
+        StreamBuilder<bool>(
+          stream: _player!.stream.buffering,
+          builder: (context, snapshot) {
+            final isBuffering = snapshot.data ?? false;
+            if (isBuffering) return const CircularProgressIndicator();
+            return const SizedBox.shrink();
+          },
+        ),
+
+        // Overlay Superior: Ícones
+        Positioned(
+          top: 4,
+          right: 4,
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: Colors.black.withOpacity(0.6),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: const Text(
+                  'Sub-stream // 15 FPS // 512 Kbps',
+                  style: TextStyle(color: Colors.white, fontSize: 10),
+                ),
+              ),
+              const SizedBox(width: 4),
+              IconButton(
+                icon: const Icon(Icons.settings),
+                onPressed: widget.onConfigure,
+                iconSize: 18,
+                color: Colors.white,
+                style: IconButton.styleFrom(
+                  backgroundColor: Colors.black.withOpacity(0.5),
+                  padding: const EdgeInsets.all(4),
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 16),
-          TextButton(
+        ),
+
+        // Botão para desconectar
+        Positioned(
+          top: 4,
+          left: 4,
+          child: IconButton(
+            icon: const Icon(Icons.stop_circle_outlined),
             onPressed: _disconnect,
-            child: const Text('Tentar Novamente'),
-          )
-        ],
-      ),
+            iconSize: 18,
+            color: Colors.white,
+            style: IconButton.styleFrom(
+              backgroundColor: Colors.black.withOpacity(0.5),
+              padding: const EdgeInsets.all(4),
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            ),
+          ),
+        ),
+        
+        // Overlay Inferior: Nome e Status
+        Positioned(
+          bottom: 0,
+          left: 0,
+          right: 0,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+            color: Colors.black.withOpacity(0.7),
+            child: Row(
+              children: [
+                Container(
+                  width: 10,
+                  height: 10,
+                  decoration: BoxDecoration(
+                    color: _hasError ? Colors.red : Colors.green,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    widget.camera.name,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

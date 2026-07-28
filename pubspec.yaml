@@ -12,9 +12,10 @@ dependencies:
     sdk: flutter
   shared_preferences: ^2.2.2
   http: ^1.2.1
-  media_kit: 1.1.10
-  media_kit_video: 1.2.4
-  media_kit_libs_video: 1.0.4
+  media_kit: ^1.1.10
+  media_kit_video: ^1.2.5
+  media_kit_libs_linux: ^1.0.4
+  url_launcher: ^6.3.2
 
 dev_dependencies:
   flutter_test:

@@ -25,11 +25,26 @@ class SentinelApp extends StatelessWidget {
       title: 'Sentinel-Hub',
       debugShowCheckedModeBanner: false,
       theme: ThemeData.dark().copyWith(
-        primaryColor: AppConfig.primaryColor,
+        primaryColor: Colors.cyan,
         scaffoldBackgroundColor: AppConfig.backgroundColor,
         colorScheme: const ColorScheme.dark(
-          primary: AppConfig.primaryColor,
-          secondary: AppConfig.primaryColor,
+          primary: Colors.cyan,
+          secondary: Colors.cyanAccent,
+          surface: AppConfig.cardColor,
+          onSurface: Colors.white,
+          background: AppConfig.backgroundColor,
+        ),
+        inputDecorationTheme: const InputDecorationTheme(
+          border: OutlineInputBorder(),
+          focusedBorder: OutlineInputBorder(
+            borderSide: BorderSide(color: Colors.cyan),
+          ),
+        ),
+        elevatedButtonTheme: ElevatedButtonThemeData(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.cyan,
+            foregroundColor: Colors.black,
+          ),
         ),
       ),
       home: const HomeScreen(),
