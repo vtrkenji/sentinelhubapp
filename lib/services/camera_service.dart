@@ -42,17 +42,44 @@ class CameraService {
     return [
       Camera(
         id: 1,
-        name: 'DVR Aitek (Canal 1)',
+        name: 'CAM 01 (DVR Aitek)',
         rtspUrl: 'rtsp://${AppConfig.dvrUsername}:${AppConfig.dvrPassword}@${AppConfig.dvrHost}/?channel=1&stream=0',
+        rtspUrlSecondary: 'rtsp://${AppConfig.dvrUsername}:${AppConfig.dvrPassword}@${AppConfig.dvrHost}/?channel=1&stream=1',
         description: 'Câmera principal do DVR',
         isActive: true,
+        bitrate: '1.2Mbps',
+        snapshotFormat: 'jpg',
       ),
       Camera(
         id: 2,
-        name: 'Câmera IP Local',
+        name: 'CAM 02 (IP Local)',
         rtspUrl: 'rtsp://${AppConfig.cameraIpUsername}:${AppConfig.cameraIpPassword}@${AppConfig.cameraIpHost}/profile1',
+        rtspUrlSecondary: 'rtsp://${AppConfig.cameraIpUsername}:${AppConfig.cameraIpPassword}@${AppConfig.cameraIpHost}/profile2',
         description: 'Câmera IP independente',
         isActive: true,
+        bitrate: '2.1Mbps',
+        snapshotFormat: 'png',
+      ),
+       Camera(
+        id: 3,
+        name: 'CAM 03',
+        rtspUrl: 'rtsp://invalid',
+        isActive: false,
+      ),
+       Camera(
+        id: 4,
+        name: 'CAM 04',
+        rtspUrl: 'rtsp://invalid',
+      ),
+       Camera(
+        id: 5,
+        name: 'CAM 05',
+        rtspUrl: 'rtsp://invalid',
+      ),
+       Camera(
+        id: 6,
+        name: 'CAM 06',
+        rtspUrl: 'rtsp://invalid',
       ),
     ];
   }
