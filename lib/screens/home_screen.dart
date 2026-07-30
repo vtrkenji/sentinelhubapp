@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'settings_screen.dart';
 import '../models/camera.dart';
 import '../services/camera_service.dart';
 import 'home/camera_grid_panel.dart';
@@ -70,6 +71,16 @@ class _HomeScreenState extends State<HomeScreen> {
         title: const Text('SENTINEL-HUB // ENGENHARIA'),
         backgroundColor: Theme.of(context).colorScheme.surface.withOpacity(0.8),
         elevation: 1,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.settings),
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(builder: (context) => const SettingsScreen()),
+              );
+            },
+          ),
+        ],
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
