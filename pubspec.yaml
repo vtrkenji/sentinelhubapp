@@ -16,6 +16,7 @@ dependencies:
   media_kit_video: ^1.2.5
   media_kit_libs_linux: ^1.0.4
   url_launcher: ^6.3.2
+  uuid: ^4.6.0
 
 dev_dependencies:
   flutter_test:

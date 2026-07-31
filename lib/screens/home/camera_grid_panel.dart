@@ -5,12 +5,10 @@ import 'focused_live_view_screen.dart';
 
 class CameraGridPanel extends StatelessWidget {
   final List<Camera> cameras;
-  final ValueChanged<Camera> onConfigureCamera;
 
   const CameraGridPanel({
     super.key,
     required this.cameras,
-    required this.onConfigureCamera,
   });
 
   @override
@@ -49,7 +47,6 @@ class CameraGridPanel extends StatelessWidget {
             child: CameraStreamTile(
               key: ValueKey(camera.id),
               camera: camera,
-              onConfigure: () => onConfigureCamera(camera),
             ),
           );
         },
