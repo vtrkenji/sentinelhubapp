@@ -3,7 +3,6 @@ import 'settings_screen.dart';
 import '../models/camera.dart';
 import '../services/camera_service.dart';
 import 'home/camera_grid_panel.dart';
-import 'home/settings_and_logs_panel.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -15,9 +14,7 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   final CameraService _cameraService = CameraService();
   List<Camera> _cameras = [];
-  Camera? _cameraToConfigure;
   bool _isLoading = true;
-  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
   @override
   void initState() {
@@ -27,7 +24,9 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _loadCameras() async {
     try {
-      final cameras = await _cameraService.getCamerasDynamic();
+      // Usar getCameras() que lê do novo sistema unificado se aplicável
+      // ou manter o getCamerasDynamic se for o método correto
+      final cameras = await _cameraService.getCameras();
       if (mounted) {
         setState(() {
           _cameras = cameras;
@@ -43,41 +42,35 @@ class _HomeScreenState extends State<HomeScreen> {
       }
     }
   }
-
-  void _onConfigureCamera(Camera camera) {
+  
+  void _reloadCameras() {
     setState(() {
-      _cameraToConfigure = camera;
+      _isLoading = true;
     });
-    _scaffoldKey.currentState?.openEndDrawer();
-  }
-
-  void _onCameraSettingsChanged(Camera updatedCamera) {
-    // Atualiza a lista local e o estado para refletir a mudança imediatamente
-    final index = _cameras.indexWhere((c) => c.id == updatedCamera.id);
-    if (index != -1) {
-      setState(() {
-        _cameras[index] = updatedCamera;
-        _cameraToConfigure = updatedCamera;
-      });
-    }
+    _loadCameras();
   }
 
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      key: _scaffoldKey,
       appBar: AppBar(
-        title: const Text('SENTINEL-HUB // ENGENHARIA'),
+        title: const Text('SENTINEL-HUB'),
         backgroundColor: Theme.of(context).colorScheme.surface.withOpacity(0.8),
         elevation: 1,
         actions: [
           IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: _reloadCameras,
+            tooltip: 'Recarregar Câmeras',
+          ),
+          IconButton(
             icon: const Icon(Icons.settings),
+            tooltip: 'Configurações',
             onPressed: () {
               Navigator.of(context).push(
                 MaterialPageRoute(builder: (context) => const SettingsScreen()),
-              );
+              ).then((_) => _reloadCameras()); // Recarrega após fechar as configs
             },
           ),
         ],
@@ -86,16 +79,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ? const Center(child: CircularProgressIndicator())
           : CameraGridPanel(
               cameras: _cameras,
-              onConfigureCamera: _onConfigureCamera,
             ),
-      endDrawer: Drawer(
-        width: MediaQuery.of(context).size.width * 0.35, // Ocupa 35% da tela
-        child: SettingsAndLogsPanel(
-          key: ValueKey(_cameraToConfigure?.id), // Garante que o painel reconstrua ao mudar de câmera
-          selectedCamera: _cameraToConfigure,
-          onCameraSettingsChanged: _onCameraSettingsChanged,
-        ),
-      ),
     );
   }
 }

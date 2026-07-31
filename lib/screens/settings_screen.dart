@@ -1,184 +1,276 @@
 import 'package:flutter/material.dart';
-import '../main.dart';
-import '../models/rf_device.dart';
+import '../models/camera.dart';
+import '../services/camera_service.dart';
+import 'camera_edit_screen.dart';
+import '../models/hardware_module.dart';
+import '../services/module_service.dart';
+import 'module_edit_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
 
   @override
-  State<SettingsScreen> createState() => SettingsScreenState();
+  State<SettingsScreen> createState() => _SettingsScreenState();
 }
 
-class SettingsScreenState extends State<SettingsScreen> {
-  bool _ntfyEnabled = false;
-  late TextEditingController _ntfyTopicUrlController;
-  List<RFDevice> _rfDevices = [];
+class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProviderStateMixin {
+  late TabController _tabController;
+  
+  // Camera state
+  late Future<List<Camera>> _camerasFuture;
+  final CameraService _cameraService = CameraService();
+
+  // Module state
+  late Future<List<HardwareModule>> _modulesFuture;
+  final ModuleService _moduleService = ModuleService();
 
   @override
   void initState() {
     super.initState();
-    _ntfyTopicUrlController = TextEditingController();
-    _loadSettings();
+    _tabController = TabController(length: 2, vsync: this);
+    _loadCameras();
+    _loadModules();
   }
 
-  Future<void> _loadSettings() async {
-    _ntfyEnabled = await settingsService.loadNtfyEnabled();
-    _ntfyTopicUrlController = TextEditingController(text: await settingsService.loadNtfyTopicUrl());
-    _rfDevices = await settingsService.loadRfDevices();
-    setState(() {});
-  }
-
-  Future<void> _saveSettings() async {
-    await settingsService.saveNtfyEnabled(_ntfyEnabled);
-    await settingsService.saveNtfyTopicUrl(_ntfyTopicUrlController.text);
-    await settingsService.saveRfDevices(_rfDevices);
-    
-    // Restart the ntfy stream service to apply changes
-    await ntfyStreamService.restart();
-
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Configurações salvas!')),
-    );
-  }
-
-  void _addDevice() {
-    _showDeviceDialog();
-  }
-
-  void _editDevice(RFDevice device) {
-    _showDeviceDialog(device: device);
-  }
-
-  void _deleteDevice(RFDevice device) {
+  void _loadCameras() {
     setState(() {
-      _rfDevices.remove(device);
+      _camerasFuture = _cameraService.getCameras();
     });
   }
 
-  void _showDeviceDialog({RFDevice? device}) {
-    final codeController = TextEditingController(text: device?.code.toString() ?? '');
-    final nameController = TextEditingController(text: device?.name ?? '');
+  void _loadModules() {
+    setState(() {
+      _modulesFuture = _moduleService.getModules();
+    });
+  }
 
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: Text(device == null ? 'Adicionar Dispositivo' : 'Editar Dispositivo'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: codeController,
-                decoration: const InputDecoration(labelText: 'Código RF'),
-                keyboardType: TextInputType.number,
-              ),
-              TextField(
-                controller: nameController,
-                decoration: const InputDecoration(labelText: 'Nome do Dispositivo'),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Cancelar'),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                final int? code = int.tryParse(codeController.text);
-                final String name = nameController.text;
-                if (code != null && name.isNotEmpty) {
-                  setState(() {
-                    if (device == null) {
-                      _rfDevices.add(RFDevice(code: code, name: name));
-                    } else {
-                      device.code = code;
-                      device.name = name;
-                    }
-                  });
-                  Navigator.of(context).pop();
-                }
-              },
-              child: const Text('Salvar'),
-            ),
-          ],
-        );
-      },
-    );
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Configurações'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.save),
-            onPressed: _saveSettings,
-          ),
+        title: const Text('Central de Configurações'),
+        bottom: TabBar(
+          controller: _tabController,
+          tabs: const [
+            Tab(icon: Icon(Icons.videocam), text: 'Câmeras'),
+            Tab(icon: Icon(Icons.developer_board), text: 'Módulos'),
+          ],
+        ),
+      ),
+      body: TabBarView(
+        controller: _tabController,
+        children: [
+          _buildCamerasTab(context),
+          _buildModulesTab(context),
         ],
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Notificações (ntfy.sh)', style: Theme.of(context).textTheme.titleLarge),
-            SwitchListTile(
-              title: const Text('Habilitar Listener ntfy.sh'),
-              value: _ntfyEnabled,
-              onChanged: (bool value) {
-                setState(() {
-                  _ntfyEnabled = value;
-                });
-              },
-            ),
-            TextFormField(
-              controller: _ntfyTopicUrlController,
-              decoration: const InputDecoration(labelText: 'URL do Tópico ntfy.sh'),
-            ),
-            const SizedBox(height: 24),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text('Mapeamento de Dispositivos RF', style: Theme.of(context).textTheme.titleLarge),
-                IconButton(
-                  icon: const Icon(Icons.add),
-                  onPressed: _addDevice,
-                ),
-              ],
-            ),
-            ListView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: _rfDevices.length,
-              itemBuilder: (context, index) {
-                final device = _rfDevices[index];
-                return ListTile(
-                  title: Text(device.name),
-                  subtitle: Text('Código: ${device.code}'),
+    );
+  }
+
+  // Builder for the Cameras tab
+  Widget _buildCamerasTab(BuildContext context) {
+    return Scaffold(
+      body: FutureBuilder<List<Camera>>(
+        future: _camerasFuture,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          if (snapshot.hasError) {
+            return Center(child: Text('Erro ao carregar câmeras: ${snapshot.error}'));
+          }
+          if (!snapshot.hasData || snapshot.data!.isEmpty) {
+            return const Center(child: Text('Nenhuma câmera configurada.'));
+          }
+
+          final cameras = snapshot.data!;
+          return ListView.builder(
+            padding: const EdgeInsets.all(8.0),
+            itemCount: cameras.length,
+            itemBuilder: (context, index) {
+              final camera = cameras[index];
+              return Card(
+                margin: const EdgeInsets.symmetric(vertical: 4.0),
+                child: ListTile(
+                  title: Text(camera.name),
+                  subtitle: Text(camera.rtspUrl, overflow: TextOverflow.ellipsis),
                   trailing: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       IconButton(
                         icon: const Icon(Icons.edit),
-                        onPressed: () => _editDevice(device),
+                        tooltip: 'Editar Câmera',
+                        onPressed: () => _editCamera(camera),
                       ),
                       IconButton(
-                        icon: const Icon(Icons.delete),
-                        onPressed: () => _deleteDevice(device),
+                        icon: const Icon(Icons.delete, color: Colors.redAccent),
+                        tooltip: 'Remover Câmera',
+                        onPressed: () => _deleteCamera(camera.id),
                       ),
                     ],
                   ),
-                );
-              },
-            ),
-          ],
-        ),
+                ),
+              );
+            },
+          );
+        },
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () => _editCamera(null), // Pass null to create a new camera
+        tooltip: 'Adicionar Nova Câmera',
+        child: const Icon(Icons.add),
       ),
     );
   }
-}
 
+  void _editCamera(Camera? camera) async {
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => CameraEditScreen(camera: camera)),
+    );
+    if (result == true) {
+      _loadCameras();
+    }
+  }
+
+  void _deleteCamera(int id) async {
+    final bool? confirm = await showDialog<bool>(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Confirmar Exclusão'),
+          content: const Text('Tem certeza que deseja remover esta câmera?'),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Cancelar'),
+            ),
+            TextButton(
+              style: TextButton.styleFrom(foregroundColor: Colors.red),
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text('Remover'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirm == true) {
+      await _cameraService.removeCamera(id);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+            content: Text('Câmera removida com sucesso!'),
+            backgroundColor: Colors.green),
+      );
+      _loadCameras();
+    }
+  }
+
+  // Builder for the Modules tab
+  Widget _buildModulesTab(BuildContext context) {
+    return Scaffold(
+      body: FutureBuilder<List<HardwareModule>>(
+        future: _modulesFuture,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          if (snapshot.hasError) {
+            return Center(child: Text('Erro ao carregar módulos: ${snapshot.error}'));
+          }
+          if (!snapshot.hasData || snapshot.data!.isEmpty) {
+            return const Center(child: Text('Nenhum módulo configurado.'));
+          }
+
+          final modules = snapshot.data!;
+          return ListView.builder(
+            padding: const EdgeInsets.all(8.0),
+            itemCount: modules.length,
+            itemBuilder: (context, index) {
+              final module = modules[index];
+              return Card(
+                margin: const EdgeInsets.symmetric(vertical: 4.0),
+                child: ListTile(
+                  leading: const Icon(Icons.memory),
+                  title: Text(module.name),
+                  subtitle: Text('${module.type.displayName} - ${module.ipAddress}', overflow: TextOverflow.ellipsis),
+                  trailing: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.edit),
+                        tooltip: 'Editar Módulo',
+                        onPressed: () => _editModule(module),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.delete, color: Colors.redAccent),
+                        tooltip: 'Remover Módulo',
+                        onPressed: () => _deleteModule(module.id),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          );
+        },
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () => _editModule(null), // Pass null to create a new module
+        tooltip: 'Adicionar Novo Módulo',
+        child: const Icon(Icons.add),
+      ),
+    );
+  }
+
+  void _editModule(HardwareModule? module) async {
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => ModuleEditScreen(module: module)),
+    );
+    if (result == true) {
+      _loadModules();
+    }
+  }
+
+  void _deleteModule(String id) async {
+    final bool? confirm = await showDialog<bool>(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Confirmar Exclusão'),
+          content: const Text('Tem certeza que deseja remover este módulo?'),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Cancelar'),
+            ),
+            TextButton(
+              style: TextButton.styleFrom(foregroundColor: Colors.red),
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text('Remover'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirm == true) {
+      await _moduleService.removeModule(id);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+            content: Text('Módulo removido com sucesso!'),
+            backgroundColor: Colors.green),
+      );
+      _loadModules();
+    }
+  }
+  }

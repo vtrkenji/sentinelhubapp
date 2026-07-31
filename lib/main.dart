@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:media_kit/media_kit.dart';
-import 'services/ntfy_service.dart';
-import 'services/ntfy_stream_service.dart';
 import 'services/settings_service.dart';
 import 'config/app_config.dart';
 import 'screens/home_screen.dart';
@@ -14,8 +12,6 @@ final GlobalKey<ScaffoldMessengerState> scaffoldMessengerKey =
 
 // Global service locators
 late SettingsService settingsService;
-late NtfyService ntfyService;
-late NtfyStreamService ntfyStreamService;
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -27,11 +23,6 @@ void main() async {
 
   // Initialize services
   settingsService = SettingsService();
-  ntfyService = NtfyService();
-  ntfyStreamService = NtfyStreamService(settingsService);
-
-  // Start the ntfy stream listener
-  await ntfyStreamService.start();
 
   runApp(const SentinelApp());
 }

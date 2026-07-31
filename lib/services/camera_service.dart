@@ -7,29 +7,8 @@ import '../models/camera.dart';
 class CameraService {
   static const String _camerasKey = 'saved_cameras';
 
-  // Retorna a lista de câmeras de forma síncrona (usando os valores padrão do AppConfig)
-  // Este método pode ser removido ou refatorado se a ideia é ter apenas câmeras configuráveis.
-  List<Camera> getAllCameras() {
-    return [
-      Camera(
-        id: 1,
-        name: 'DVR Aitek (Canal 1)',
-        rtspUrl: 'rtsp://${AppConfig.dvrUsername}:${AppConfig.dvrPassword}@${AppConfig.dvrHost}/?channel=1&stream=0',
-        description: 'Câmera principal do DVR',
-        isActive: true,
-      ),
-      Camera(
-        id: 2,
-        name: 'Câmera IP Local',
-        rtspUrl: 'rtsp://${AppConfig.cameraIpUsername}:${AppConfig.cameraIpPassword}@${AppConfig.cameraIpHost}/profile1',
-        description: 'Câmera IP independente',
-        isActive: true,
-      ),
-    ];
-  }
-
   // Versão assíncrona que lê as câmeras salvas pelo usuário no SharedPreferences
-  Future<List<Camera>> getCamerasDynamic() async {
+  Future<List<Camera>> getCameras() async {
     final prefs = await SharedPreferences.getInstance();
     final String? camerasJson = prefs.getString(_camerasKey);
 
@@ -38,50 +17,8 @@ class CameraService {
       return decodedData.map((json) => Camera.fromJson(json)).toList();
     }
 
-    // Se não houver câmeras salvas, retorna uma lista padrão (opcional, pode ser vazia)
-    return [
-      Camera(
-        id: 1,
-        name: 'CAM 01 (DVR Aitek)',
-        rtspUrl: 'rtsp://${AppConfig.dvrUsername}:${AppConfig.dvrPassword}@${AppConfig.dvrHost}/?channel=1&stream=0',
-        rtspUrlSecondary: 'rtsp://${AppConfig.dvrUsername}:${AppConfig.dvrPassword}@${AppConfig.dvrHost}/?channel=1&stream=1',
-        description: 'Câmera principal do DVR',
-        isActive: true,
-        bitrate: '1.2Mbps',
-        snapshotFormat: 'jpg',
-      ),
-      Camera(
-        id: 2,
-        name: 'CAM 02 (IP Local)',
-        rtspUrl: 'rtsp://${AppConfig.cameraIpUsername}:${AppConfig.cameraIpPassword}@${AppConfig.cameraIpHost}/profile1',
-        rtspUrlSecondary: 'rtsp://${AppConfig.cameraIpUsername}:${AppConfig.cameraIpPassword}@${AppConfig.cameraIpHost}/profile2',
-        description: 'Câmera IP independente',
-        isActive: true,
-        bitrate: '2.1Mbps',
-        snapshotFormat: 'png',
-      ),
-       Camera(
-        id: 3,
-        name: 'CAM 03',
-        rtspUrl: 'rtsp://invalid',
-        isActive: false,
-      ),
-       Camera(
-        id: 4,
-        name: 'CAM 04',
-        rtspUrl: 'rtsp://invalid',
-      ),
-       Camera(
-        id: 5,
-        name: 'CAM 05',
-        rtspUrl: 'rtsp://invalid',
-      ),
-       Camera(
-        id: 6,
-        name: 'CAM 06',
-        rtspUrl: 'rtsp://invalid',
-      ),
-    ];
+    // Se não houver câmeras salvas, retorna uma lista vazia
+    return [];
   }
 
   // Novo método para salvar a lista de câmeras no SharedPreferences
@@ -93,7 +30,7 @@ class CameraService {
 
   // Método para adicionar uma nova câmera (pode ser usado na tela de configurações)
   Future<void> addCamera(Camera camera) async {
-    List<Camera> currentCameras = await getCamerasDynamic();
+    List<Camera> currentCameras = await getCameras();
     // Garante que a nova câmera tenha um ID único
     int newId = currentCameras.isEmpty ? 1 : currentCameras.map((c) => c.id).reduce(math.max) + 1;
     final cameraWithId = Camera(
@@ -109,7 +46,7 @@ class CameraService {
 
   // Método para atualizar uma câmera existente
   Future<void> updateCamera(Camera updatedCamera) async {
-    List<Camera> currentCameras = await getCamerasDynamic();
+    List<Camera> currentCameras = await getCameras();
     int index = currentCameras.indexWhere((c) => c.id == updatedCamera.id);
     if (index != -1) {
       currentCameras[index] = updatedCamera;
@@ -119,7 +56,7 @@ class CameraService {
 
   // Método para remover uma câmera
   Future<void> removeCamera(int id) async {
-    List<Camera> currentCameras = await getCamerasDynamic();
+    List<Camera> currentCameras = await getCameras();
     currentCameras.removeWhere((c) => c.id == id);
     await saveCameras(currentCameras);
   }

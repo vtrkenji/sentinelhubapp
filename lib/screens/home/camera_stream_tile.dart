@@ -1,15 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:media_kit/media_kit.dart';
 import 'package:media_kit_video/media_kit_video.dart';
+import 'package:sentinel_hub/screens/settings_screen.dart';
 import '../../models/camera.dart';
 
 class CameraStreamTile extends StatefulWidget {
   final Camera camera;
-  final VoidCallback onConfigure;
 
   const CameraStreamTile({
     required this.camera,
-    required this.onConfigure,
     super.key,
   });
 
@@ -24,6 +23,7 @@ class _CameraStreamTileState extends State<CameraStreamTile> {
   bool _isPlaying = false;
   bool _isConnecting = false;
   bool _hasError = false;
+  bool _isMuted = true;
 
   @override
   void dispose() {
@@ -56,6 +56,9 @@ class _CameraStreamTileState extends State<CameraStreamTile> {
           enableHardwareAcceleration: false,
         ),
       );
+
+      // Garante que o player inicie mutado
+      await _player!.setVolume(0);
 
       // Prioriza a stream secundária para a grade
       final streamUrl = widget.camera.rtspUrlSecondary?.isNotEmpty == true
@@ -99,6 +102,14 @@ class _CameraStreamTileState extends State<CameraStreamTile> {
         });
       }
     }
+  }
+
+  void _toggleMute() {
+    if (_player == null) return;
+    setState(() {
+      _isMuted = !_isMuted;
+      _player!.setVolume(_isMuted ? 0 : 100);
+    });
   }
 
   void _disconnect() {
@@ -164,7 +175,7 @@ class _CameraStreamTileState extends State<CameraStreamTile> {
 
   Widget _buildPlayerView() {
     return Stack(
-      alignment: Alignment.center,
+      fit: StackFit.expand,
       children: [
         Video(controller: _videoController!, fit: BoxFit.cover),
         
@@ -172,90 +183,93 @@ class _CameraStreamTileState extends State<CameraStreamTile> {
           stream: _player!.stream.buffering,
           builder: (context, snapshot) {
             final isBuffering = snapshot.data ?? false;
-            if (isBuffering) return const CircularProgressIndicator();
+            if (isBuffering) return const Center(child: CircularProgressIndicator());
             return const SizedBox.shrink();
           },
         ),
 
-        // Overlay Superior: Ícones
+        // Header Unificado
         Positioned(
-          top: 4,
-          right: 4,
-          child: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                decoration: BoxDecoration(
-                  color: Colors.black.withOpacity(0.6),
-                  borderRadius: BorderRadius.circular(4),
-                ),
-                child: const Text(
-                  'Sub-stream // 15 FPS // 512 Kbps',
-                  style: TextStyle(color: Colors.white, fontSize: 10),
-                ),
-              ),
-              const SizedBox(width: 4),
-              IconButton(
-                icon: const Icon(Icons.settings),
-                onPressed: widget.onConfigure,
-                iconSize: 18,
-                color: Colors.white,
-                style: IconButton.styleFrom(
-                  backgroundColor: Colors.black.withOpacity(0.5),
-                  padding: const EdgeInsets.all(4),
-                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                ),
-              ),
-            ],
-          ),
-        ),
-
-        // Botão para desconectar
-        Positioned(
-          top: 4,
-          left: 4,
-          child: IconButton(
-            icon: const Icon(Icons.stop_circle_outlined),
-            onPressed: _disconnect,
-            iconSize: 18,
-            color: Colors.white,
-            style: IconButton.styleFrom(
-              backgroundColor: Colors.black.withOpacity(0.5),
-              padding: const EdgeInsets.all(4),
-              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-            ),
-          ),
-        ),
-        
-        // Overlay Inferior: Nome e Status
-        Positioned(
-          bottom: 0,
+          top: 0,
           left: 0,
           right: 0,
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
-            color: Colors.black.withOpacity(0.7),
+            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [Colors.black.withOpacity(0.7), Colors.transparent],
+              ),
+            ),
             child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Container(
-                  width: 10,
-                  height: 10,
-                  decoration: BoxDecoration(
-                    color: _hasError ? Colors.red : Colors.green,
-                    shape: BoxShape.circle,
+                // 1. Botão Stop
+                IconButton(
+                  icon: const Icon(Icons.stop),
+                  onPressed: _disconnect,
+                  iconSize: 20,
+                  color: Colors.white,
+                  tooltip: 'Parar',
+                  style: _iconButtonStyle,
+                ),
+
+                // 2. Status e Nome da Câmera (Centralizado e Flexível)
+                Expanded(
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Container(
+                        width: 9,
+                        height: 9,
+                        decoration: BoxDecoration(
+                          color: _hasError ? Colors.red : Colors.green.shade400,
+                          shape: BoxShape.circle,
+                          border: Border.all(color: Colors.black, width: 1),
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      Flexible(
+                        child: Text(
+                          widget.camera.name,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                            shadows: [Shadow(blurRadius: 1.0, color: Colors.black)],
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    widget.camera.name,
-                    style: const TextStyle(
+
+                // 3. Botões de Ação (Direita)
+                Row(
+                  children: [
+                    IconButton(
+                      icon: Icon(_isMuted ? Icons.volume_off : Icons.volume_up),
+                      onPressed: _toggleMute,
+                      iconSize: 20,
                       color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 14,
+                      tooltip: _isMuted ? 'Ativar Som' : 'Desativar Som',
+                      style: _iconButtonStyle,
                     ),
-                    overflow: TextOverflow.ellipsis,
-                  ),
+                    IconButton(
+                      icon: const Icon(Icons.settings),
+                      onPressed: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(builder: (context) => const SettingsScreen()),
+                        );
+                      },
+                      iconSize: 20,
+                      color: Colors.white,
+                      tooltip: 'Configurações',
+                      style: _iconButtonStyle,
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -264,4 +278,11 @@ class _CameraStreamTileState extends State<CameraStreamTile> {
       ],
     );
   }
+
+  // Estilo compartilhado para os IconButtons
+  final ButtonStyle _iconButtonStyle = IconButton.styleFrom(
+    backgroundColor: Colors.black.withOpacity(0.3),
+    padding: const EdgeInsets.all(6),
+    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+  );
 }
