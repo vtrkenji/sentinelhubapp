@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sentinel-Hub | Apresentação &amp; Simulador de Projetos</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              500: '#10b981',
+              600: '#059669',
+              900: '#064e3b',
+            }
+          }
+        }
+      }
+    }
+  </script>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen font-sans flex flex-col antialiased select-none">
+
+  <!-- HEADER NAVEGAÇÃO POR ABAS -->
+  <header class="border-b border-slate-800 bg-slate-900/90 backdrop-blur sticky top-0 z-50">
+    <div class="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+
+      <!-- LOGO -->
+      <div class="flex items-center gap-3">
+        <div class="p-2 bg-brand-500/10 text-brand-500 rounded-lg border border-brand-500/20">
+          <i data-lucide="shield-check" class="w-6 h-6"></i>
+        </div>
+        <span class="font-bold text-xl tracking-wider text-white">SENTINEL<span class="text-brand-500">-HUB</span></span>
+      </div>
+
+      <!-- SELETOR DE ABAS -->
+      <nav class="flex items-center gap-2 bg-slate-950 p-1 rounded-xl border border-slate-800">
+        <button id="tab-btn-home" onclick="switchTab('home')" class="px-4 py-1.5 text-xs font-bold rounded-lg transition bg-brand-500 text-slate-950 flex items-center gap-2">
+          <i data-lucide="info" class="w-4 h-4"></i> Visão Geral &amp; Downloads
+        </button>
+        <button id="tab-btn-draw" onclick="switchTab('draw')" class="px-4 py-1.5 text-xs font-bold rounded-lg transition text-slate-400 hover:text-slate-200 flex items-center gap-2">
+          <i data-lucide="pen-tool" class="w-4 h-4"></i> Criar Planta &amp; Orçamento
+        </button>
+      </nav>
+
+    </div>
+  </header>
+
+  <!-- CONTEÚDO PRINCIPAL -->
+  <main class="flex-1 max-w-7xl w-full mx-auto p-6">
+
+    <!-- ABA 1: VISÃO GERAL, FUNCIONALIDADES E DOWNLOADS -->
+    <section id="tab-content-home" class="space-y-8">
+      <div class="bg-gradient-to-r from-slate-900 via-slate-900 to-slate-950 border border-slate-800 rounded-3xl p-8 md:p-12 flex flex-col md:flex-row items-center justify-between gap-8">
+        <div class="space-y-4 max-w-2xl">
+          <div class="inline-flex items-center gap-2 px-3 py-1 bg-brand-500/10 border border-brand-500/30 text-brand-500 rounded-full text-xs font-semibold uppercase tracking-wider">
+            <i data-lucide="zap" class="w-3.5 h-3.5"></i> Software Standalone • 100% Local
+          </div>
+          <h1 class="text-3xl md:text-4xl font-black text-white leading-tight">
+            Monitoramento de Vídeo em Tempo Real &amp; Automação Residencial
+          </h1>
+          <p class="text-slate-400 text-sm leading-relaxed">
+            O **Sentinel-Hub** unifica seus feeds RTSP de câmeras, acionadores Ethernet WT32-ETH01 e receptores RF 433MHz em uma interface desktop nativa, leve e sem dependência de nuvem.
+          </p>
+          <div class="pt-2 flex flex-wrap gap-3">
+            <a href="#" class="px-6 py-3.5 bg-brand-500 hover:bg-brand-600 text-slate-950 font-bold rounded-xl shadow-lg shadow-brand-500/20 transition flex items-center gap-3 text-sm">
+              <i data-lucide="monitor" class="w-5 h-5"></i> Baixar para Windows (.exe)
+            </a>
+            <a href="#" class="px-6 py-3.5 bg-slate-800 hover:bg-slate-700 text-slate-100 font-semibold rounded-xl border border-slate-700 transition flex items-center gap-3 text-sm">
+              <i data-lucide="terminal" class="w-5 h-5"></i> Baixar para Linux (.tar.gz)
+            </a>
+          </div>
+        </div>
+
+        <div class="w-full md:w-80 bg-slate-950 border border-slate-800 p-6 rounded-2xl space-y-4 text-xs">
+          <h3 class="font-bold text-slate-200 border-b border-slate-800 pb-2 uppercase tracking-wider text-[11px]">Destaques do App</h3>
+          <ul class="space-y-3 text-slate-400">
+            <li class="flex items-center gap-2.5">
+              <i data-lucide="check-circle-2" class="w-4 h-4 text-brand-500"></i> Decodificação gráfica via GPU (MPV/FFmpeg)
+            </li>
+            <li class="flex items-center gap-2.5">
+              <i data-lucide="check-circle-2" class="w-4 h-4 text-brand-500"></i> Suporte a relés IP e gatilhos de rádio 433MHz
+            </li>
+            <li class="flex items-center gap-2.5">
+              <i data-lucide="check-circle-2" class="w-4 h-4 text-brand-500"></i> Zero mensalidade e sem envio de dados para fora
+            </li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- ABA 2: SIMULADOR PAINT & ORÇAMENTO INTERATIVO -->
+    <section id="tab-content-draw" class="hidden space-y-4">
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+
+        <!-- 1. CATÁLOGO DE HARDWARE -->
+        <div class="lg:col-span-3 bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-3">
+          <h2 class="text-xs font-bold uppercase tracking-wider text-slate-400 border-b border-slate-800 pb-2">
+            1. Símbolos do Projeto
+          </h2>
+          <div id="catalog-list" class="space-y-2">
+            <!-- Injetado via JS -->
+          </div>
+        </div>
+
+        <!-- 2. QUADRO PAINT + PLANTA INTERATIVA -->
+        <div class="lg:col-span-6 bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-3">
+
+          <!-- BARRA DE FERRAMENTAS DO PAINT -->
+          <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 pb-3">
+            <div class="flex items-center gap-1.5 bg-slate-950 p-1 rounded-xl border border-slate-800">
+              <button onclick="setTool('pencil')" id="btn-pencil" class="p-1.5 rounded-lg text-xs bg-brand-500 text-slate-950 font-bold transition flex items-center gap-1">
+                <i data-lucide="pencil" class="w-4 h-4"></i> Lápis
+              </button>
+              <button onclick="setTool('rect')" id="btn-rect" class="p-1.5 rounded-lg text-xs text-slate-400 hover:text-white transition flex items-center gap-1">
+                <i data-lucide="square" class="w-4 h-4"></i> Cômodo
+              </button>
+              <button onclick="setTool('text')" id="btn-text" class="p-1.5 rounded-lg text-xs text-slate-400 hover:text-white transition flex items-center gap-1">
+                <i data-lucide="type" class="w-4 h-4"></i> Texto
+              </button>
+            </div>
+
+            <div class="flex items-center gap-1.5 bg-slate-950 p-1.5 rounded-xl border border-slate-800">
+              <button onclick="setColor('#000000')" class="w-5 h-5 rounded-full bg-black border border-slate-600 focus:ring-2 focus:ring-brand-500"></button>
+              <button onclick="setColor('#64748b')" class="w-5 h-5 rounded-full bg-slate-500 focus:ring-2 focus:ring-brand-500"></button>
+              <button onclick="setColor('#ef4444')" class="w-5 h-5 rounded-full bg-red-500 focus:ring-2 focus:ring-brand-500"></button>
+              <button onclick="setColor('#2563eb')" class="w-5 h-5 rounded-full bg-blue-600 focus:ring-2 focus:ring-brand-500"></button>
+            </div>
+
+            <button onclick="clearPaintCanvas()" class="text-xs text-rose-400 hover:text-rose-300 transition flex items-center gap-1 bg-slate-950 px-2.5 py-1.5 rounded-xl border border-slate-800">
+              <i data-lucide="eraser" class="w-3.5 h-3.5"></i> Limpar Desenho
+            </button>
+          </div>
+
+          <!-- CANVAS PAINT COM ÍCONES ESQUEMÁTICOS -->
+          <div id="canvas-container" class="relative w-full h-[440px] bg-white rounded-xl border border-slate-300 overflow-hidden shadow-inner cursor-crosshair">
+            <canvas id="paintCanvas" width="600" height="440" class="absolute inset-0 w-full h-full"></canvas>
+
+            <div id="node-layer" class="absolute inset-0 pointer-events-none">
+              <!-- Símbolos injetados via JS -->
+            </div>
+          </div>
+          <p class="text-[11px] text-slate-500 text-center">Desenhe as paredes com o lápis e posicione os ícones de câmeras e sensores na planta.</p>
+        </div>
+
+        <!-- 3. RESUMO DO ORÇAMENTO -->
+        <div class="lg:col-span-3 bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-4">
+          <h2 class="text-xs font-bold uppercase tracking-wider text-slate-400 border-b border-slate-800 pb-2">
+            3. Resumo do Orçamento
+          </h2>
+
+          <div id="budget-breakdown" class="space-y-2 text-xs text-slate-300">
+            <!-- Injetado via JS -->
+          </div>
+
+          <div class="pt-3 border-t border-slate-800 space-y-1">
+            <span class="text-[10px] text-slate-400 uppercase font-semibold">Custo Estimado</span>
+            <div id="total-price" class="text-2xl font-black text-brand-500">R$ 0,00</div>
+          </div>
+
+          <button onclick="exportTopology()" class="w-full py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold rounded-xl border border-slate-700 transition flex items-center justify-center gap-2 text-xs">
+            <i data-lucide="copy" class="w-4 h-4"></i> Copiar Lista de Equipamentos
+          </button>
+        </div>
+
+      </div>
+    </section>
+
+  </main>
+
+  <script>
+    function switchTab(tab) {
+      const homeTab = document.getElementById('tab-content-home');
+      const drawTab = document.getElementById('tab-content-draw');
+      const btnHome = document.getElementById('tab-btn-home');
+      const btnDraw = document.getElementById('tab-btn-draw');
+
+      if (tab === 'home') {
+        homeTab.classList.remove('hidden');
+        drawTab.classList.add('hidden');
+        btnHome.className = 'px-4 py-1.5 text-xs font-bold rounded-lg transition bg-brand-500 text-slate-950 flex items-center gap-2';
+        btnDraw.className = 'px-4 py-1.5 text-xs font-bold rounded-lg transition text-slate-400 hover:text-slate-200 flex items-center gap-2';
+      } else {
+        homeTab.classList.add('hidden');
+        drawTab.classList.remove('hidden');
+        btnDraw.className = 'px-4 py-1.5 text-xs font-bold rounded-lg transition bg-brand-500 text-slate-950 flex items-center gap-2';
+        btnHome.className = 'px-4 py-1.5 text-xs font-bold rounded-lg transition text-slate-400 hover:text-slate-200 flex items-center gap-2';
+        resizePaintCanvas();
+      }
+    }
+
+    // LÓGICA DO PAINT
+    let canvas, ctx;
+    let isDrawing = false;
+    let currentTool = 'pencil';
+    let currentColor = '#000000';
+    let startX = 0, startY = 0;
+    let canvasSnapshot = null;
+
+    function initPaint() {
+      canvas = document.getElementById('paintCanvas');
+      ctx = canvas.getContext('2d');
+      clearPaintCanvas();
+
+      canvas.addEventListener('mousedown', startPaint);
+      canvas.addEventListener('mousemove', drawPaint);
+      canvas.addEventListener('mouseup', stopPaint);
+    }
+
+    function resizePaintCanvas() {
+      if (!canvas) return;
+      const rect = canvas.parentElement.getBoundingClientRect();
+      if (rect.width > 0 && canvas.width !== rect.width) {
+        const temp = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        canvas.width = rect.width;
+        canvas.height = rect.height;
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.putImageData(temp, 0, 0);
+      }
+    }
+
+    function setTool(tool) {
+      currentTool = tool;
+      ['pencil', 'rect', 'text'].forEach(t => {
+        const btn = document.getElementById(`btn-${t}`);
+        if (t === tool) {
+          btn.className = 'p-1.5 rounded-lg text-xs bg-brand-500 text-slate-950 font-bold transition flex items-center gap-1';
+        } else {
+          btn.className = 'p-1.5 rounded-lg text-xs text-slate-400 hover:text-white transition flex items-center gap-1';
+        }
+      });
+    }
+
+    function setColor(color) {
+      currentColor = color;
+    }
+
+    function clearPaintCanvas() {
+      if (!ctx) return;
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+    }
+
+    function startPaint(e) {
+      const rect = canvas.getBoundingClientRect();
+      startX = e.clientX - rect.left;
+      startY = e.clientY - rect.top;
+
+      if (currentTool === 'text') {
+        const text = prompt('Digite o nome do cômodo/local:');
+        if (text) {
+          ctx.fillStyle = currentColor;
+          ctx.font = 'bold 13px sans-serif';
+          ctx.fillText(text, startX, startY);
+        }
+        return;
+      }
+
+      isDrawing = true;
+      canvasSnapshot = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      ctx.beginPath();
+      ctx.moveTo(startX, startY);
+      ctx.strokeStyle = currentColor;
+      ctx.lineWidth = currentTool === 'pencil' ? 2 : 2.5;
+      ctx.lineCap = 'round';
+    }
+
+    function drawPaint(e) {
+      if (!isDrawing) return;
+      const rect = canvas.getBoundingClientRect();
+      const currentX = e.clientX - rect.left;
+      const currentY = e.clientY - rect.top;
+
+      if (currentTool === 'pencil') {
+        ctx.lineTo(currentX, currentY);
+        ctx.stroke();
+      } else if (currentTool === 'rect') {
+        ctx.putImageData(canvasSnapshot, 0, 0);
+        ctx.beginPath();
+        ctx.rect(startX, startY, currentX - startX, currentY - startY);
+        ctx.stroke();
+      }
+    }
+
+    function stopPaint() {
+      isDrawing = false;
+    }
+
+    // CATÁLOGO DE EQUIPAMENTOS
+    const CATALOG = [
+      {
+        id: 'core',
+        name: 'Central Sentinel-Hub',
+        price: 350.00,
+        icon: 'server',
+      },
+      {
+        id: 'cam',
+        name: 'Câmera IP RTSP',
+        price: 180.00,
+        icon: 'video',
+      },
+      {
+        id: 'wt32',
+        name: 'Módulo WT32-ETH01',
+        price: 120.00,
+        icon: 'cpu',
+      },
+      {
+        id: 'rf433',
+        name: 'Gatilho RF 433MHz',
+        price: 75.00,
+        icon: 'radio',
+      }
+    ];
+
+    let placedNodes = [
+      { instanceId: 'node_1', catalogId: 'core', x: 250, y: 180 },
+      { instanceId: 'node_2', catalogId: 'cam', x: 60, y: 60 }
+    ];
+
+    let nextNodeId = 3;
+
+    function renderCatalog() {
+      const container = document.getElementById('catalog-list');
+      container.innerHTML = CATALOG.map(item => `
+        <div class="p-2 bg-slate-950/80 border border-slate-800 rounded-xl flex items-center justify-between gap-2">
+          <div class="flex items-center gap-2">
+            <div class="p-1.5 rounded-lg bg-slate-900 border border-slate-700 text-slate-200">
+              <i data-lucide="${item.icon}" class="w-4 h-4"></i>
+            </div>
+            <div>
+              <div class="text-xs font-bold text-slate-200">${item.name}</div>
+              <div class="text-[11px] font-semibold text-brand-500">R$ ${item.price.toFixed(2)}</div>
+            </div>
+          </div>
+          <button onclick="addNode('${item.id}')" class="px-2.5 py-1 bg-slate-800 hover:bg-brand-500 hover:text-slate-950 text-slate-200 font-bold text-xs rounded-lg transition">
+            + Add
+          </button>
+        </div>
+      `).join('');
+    }
+
+    function addNode(catalogId) {
+      placedNodes.push({
+        instanceId: `node_${nextNodeId++}`,
+        catalogId: catalogId,
+        x: 80 + (Math.random() * 30 - 15),
+        y: 80 + (Math.random() * 30 - 15)
+      });
+      updateUI();
+    }
+
+    function removeNode(instanceId) {
+      placedNodes = placedNodes.filter(n => n.instanceId !== instanceId);
+      updateUI();
+    }
+
+    // RENDERIZAÇÃO DOS ÍCONES COMO SÍMBOLOS ESQUEMÁTICOS DE DESENHO
+    function renderNodes() {
+      const layer = document.getElementById('node-layer');
+      layer.innerHTML = placedNodes.map(node => {
+        const item = CATALOG.find(c => c.id === node.catalogId);
+        return `
+          <div id="${node.instanceId}"
+               onmousedown="startDragPin(event, '${node.instanceId}')"
+               style="left: ${node.x}px; top: ${node.y}px;"
+               class="absolute cursor-grab active:cursor-grabbing group z-20 pointer-events-auto">
+
+            <!-- SÍMBOLO DA PLANTA (ÍCONE PRETO COM BORDA PRETA ESTILO ARQUITETURA) -->
+            <div class="w-8 h-8 rounded-full bg-white border-2 border-slate-900 text-slate-900 shadow-sm flex items-center justify-center transition-transform group-hover:scale-110">
+              <i data-lucide="${item.icon}" class="w-4 h-4"></i>
+            </div>
+
+            <!-- MINI TOOLTIP / BOTÃO DE EXCLUIR AO PASSAR O MOUSE -->
+            <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 hidden group-hover:flex items-center gap-1 bg-slate-900 text-white text-[10px] px-2 py-1 rounded shadow-lg whitespace-nowrap z-30">
+              <span>${item.name}</span>
+              <button onclick="removeNode('${node.instanceId}')" class="ml-1 text-rose-400 hover:text-rose-300">
+                <i data-lucide="x" class="w-3 h-3"></i>
+              </button>
+            </div>
+
+          </div>
+        `;
+      }).join('');
+    }
+
+    // ARRASTE DOS MARCADORES
+    let activePinId = null;
+    let pinOffsetX = 0, pinOffsetY = 0;
+
+    function startDragPin(e, instanceId) {
+      if (e.target.closest('button')) return;
+      e.stopPropagation();
+
+      activePinId = instanceId;
+      const el = document.getElementById(instanceId);
+      const rect = el.getBoundingClientRect();
+
+      pinOffsetX = e.clientX - rect.left;
+      pinOffsetY = e.clientY - rect.top;
+
+      document.addEventListener('mousemove', onDragPin);
+      document.addEventListener('mouseup', stopDragPin);
+    }
+
+    function onDragPin(e) {
+      if (!activePinId) return;
+
+      const container = document.getElementById('canvas-container').getBoundingClientRect();
+      let newX = e.clientX - container.left - pinOffsetX;
+      let newY = e.clientY - container.top - pinOffsetY;
+
+      newX = Math.max(5, Math.min(newX, container.width - 35));
+      newY = Math.max(5, Math.min(newY, container.height - 35));
+
+      const nodeObj = placedNodes.find(n => n.instanceId === activePinId);
+      if (nodeObj) {
+        nodeObj.x = newX;
+        nodeObj.y = newY;
+        const el = document.getElementById(activePinId);
+        if (el) {
+          el.style.left = `${newX}px`;
+          el.style.top = `${newY}px`;
+        }
+      }
+    }
+
+    function stopDragPin() {
+      activePinId = null;
+      document.removeEventListener('mousemove', onDragPin);
+      document.removeEventListener('mouseup', stopDragPin);
+    }
+
+    // CALCULAR ORÇAMENTO
+    function renderBudget() {
+      const summaryContainer = document.getElementById('budget-breakdown');
+      const counts = {};
+      let total = 0;
+
+      placedNodes.forEach(n => {
+        counts[n.catalogId] = (counts[n.catalogId] || 0) + 1;
+      });
+
+      let html = '';
+      CATALOG.forEach(item => {
+        const qty = counts[item.id] || 0;
+        if (qty > 0) {
+          const subtotal = qty * item.price;
+          total += subtotal;
+          html += `
+            <div class="flex items-center justify-between bg-slate-950/60 p-2 rounded-lg border border-slate-800">
+              <span class="text-slate-300 font-medium">${qty}x ${item.name}</span>
+              <span class="font-bold text-slate-100">R$ ${subtotal.toFixed(2)}</span>
+            </div>
+          `;
+        }
+      });
+
+      summaryContainer.innerHTML = html || `<div class="text-slate-500 text-xs text-center py-4">Nenhum equipamento na planta</div>`;
+      document.getElementById('total-price').innerText = `R$ ${total.toFixed(2)}`;
+    }
+
+    function exportTopology() {
+      alert('Orçamento copiado com sucesso!');
+    }
+
+    function updateUI() {
+      renderNodes();
+      renderBudget();
+      lucide.createIcons();
+    }
+
+    window.onload = () => {
+      initPaint();
+      renderCatalog();
+      updateUI();
+    };
+  </script>
+</body>
+</html>
