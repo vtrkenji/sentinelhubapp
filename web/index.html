@@ -31,8 +31,59 @@
 
   <title>sentinel_hub</title>
   <link rel="manifest" href="manifest.json">
+  <style>
+    .download-apk-container {
+      display: flex;
+      justify-content: center;
+      padding: 1rem;
+      background: linear-gradient(180deg, rgba(0, 0, 0, 0.02), transparent);
+    }
+
+    .download-apk-button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      padding: 0.95rem 1.4rem;
+      min-width: 220px;
+      border-radius: 999px;
+      border: 1px solid #00bcd4;
+      background-color: #00bcd4;
+      color: #0a0a0a;
+      font-size: 1rem;
+      font-weight: 700;
+      text-decoration: none;
+      box-shadow: 0 10px 20px rgba(0, 0, 0, 0.12);
+      transition: transform 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+    }
+
+    .download-apk-button:hover,
+    .download-apk-button:focus-visible {
+      transform: translateY(-1px);
+      box-shadow: 0 14px 24px rgba(0, 0, 0, 0.16);
+      background-color: #00d5e8;
+    }
+
+    @media (max-width: 480px) {
+      .download-apk-container {
+        padding: 0.75rem;
+      }
+      .download-apk-button {
+        width: 100%;
+        min-width: auto;
+        padding: 0.95rem 1rem;
+        font-size: 0.98rem;
+      }
+    }
+  </style>
 </head>
 <body>
+  <div class="download-apk-container">
+    <a class="download-apk-button" href="https://github.com/vtrkenji/sentinelhubapp/releases" target="_blank" rel="noopener noreferrer">
+      <span>⬇️</span>
+      <span>Baixar APK para Android</span>
+    </a>
+  </div>
   <script src="flutter_bootstrap.js" async></script>
 </body>
 </html>
