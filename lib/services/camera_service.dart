@@ -1,7 +1,6 @@
 import 'dart:convert';
 import 'dart:math' as math;
 import 'package:shared_preferences/shared_preferences.dart';
-import '../config/app_config.dart';
 import '../models/camera.dart';
 
 class CameraService {
@@ -24,7 +23,8 @@ class CameraService {
   // Novo método para salvar a lista de câmeras no SharedPreferences
   Future<void> saveCameras(List<Camera> cameras) async {
     final prefs = await SharedPreferences.getInstance();
-    final List<Map<String, dynamic>> jsonList = cameras.map((camera) => camera.toJson()).toList();
+    final List<Map<String, dynamic>> jsonList =
+        cameras.map((camera) => camera.toJson()).toList();
     await prefs.setString(_camerasKey, json.encode(jsonList));
   }
 
@@ -32,7 +32,9 @@ class CameraService {
   Future<void> addCamera(Camera camera) async {
     List<Camera> currentCameras = await getCameras();
     // Garante que a nova câmera tenha um ID único
-    int newId = currentCameras.isEmpty ? 1 : currentCameras.map((c) => c.id).reduce(math.max) + 1;
+    int newId = currentCameras.isEmpty
+        ? 1
+        : currentCameras.map((c) => c.id).reduce(math.max) + 1;
     final cameraWithId = Camera(
       id: newId,
       name: camera.name,

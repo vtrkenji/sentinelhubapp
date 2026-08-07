@@ -76,7 +76,8 @@ class _LiveViewScreenState extends State<LiveViewScreen> {
         stream: _player.stream.error,
         builder: (context, errorSnapshot) {
           if (errorSnapshot.hasData) {
-            return Center(child: Text('Erro: ${errorSnapshot.data.toString()}'));
+            return Center(
+                child: Text('Erro: ${errorSnapshot.data.toString()}'));
           }
           return StreamBuilder<bool>(
             stream: _player.stream.buffering,

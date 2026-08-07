@@ -42,7 +42,7 @@ class _HomeScreenState extends State<HomeScreen> {
       }
     }
   }
-  
+
   void _reloadCameras() {
     setState(() {
       _isLoading = true;
@@ -50,13 +50,12 @@ class _HomeScreenState extends State<HomeScreen> {
     _loadCameras();
   }
 
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text('SENTINEL-HUB'),
-        backgroundColor: Theme.of(context).colorScheme.surface.withOpacity(0.8),
+        backgroundColor: Theme.of(context).colorScheme.surface.withAlpha(204),
         elevation: 1,
         actions: [
           IconButton(
@@ -68,9 +67,13 @@ class _HomeScreenState extends State<HomeScreen> {
             icon: const Icon(Icons.settings),
             tooltip: 'Configurações',
             onPressed: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(builder: (context) => const SettingsScreen()),
-              ).then((_) => _reloadCameras()); // Recarrega após fechar as configs
+              Navigator.of(context)
+                  .push(
+                    MaterialPageRoute(
+                        builder: (context) => const SettingsScreen()),
+                  )
+                  .then((_) =>
+                      _reloadCameras()); // Recarrega após fechar as configs
             },
           ),
         ],

@@ -70,11 +70,12 @@ class HardwareModule {
       id: json['id'],
       name: json['name'],
       type: ModuleType.values.firstWhere(
-            (e) => e.toString() == json['type'],
+        (e) => e.toString() == json['type'],
         orElse: () => ModuleType.genericEsp32,
       ),
       ipAddress: json['ipAddress'],
-      specificSettings: Map<String, dynamic>.from(json['specificSettings'] ?? {}),
+      specificSettings:
+          Map<String, dynamic>.from(json['specificSettings'] ?? {}),
     );
   }
 }

@@ -30,15 +30,19 @@ class _ModuleEditScreenState extends State<ModuleEditScreen> {
     final module = widget.module;
     _nameController = TextEditingController(text: module?.name ?? '');
     _ipController = TextEditingController(text: module?.ipAddress ?? '');
-    
+
     _selectedModuleType = module?.type ?? ModuleType.genericEsp32;
 
     // Initialize controllers for specific settings
     final specificSettings = module?.specificSettings ?? {};
-    _telegramTokenController = TextEditingController(text: specificSettings['telegramBotToken'] ?? '');
-    _telegramChatIdController = TextEditingController(text: specificSettings['telegramChatId'] ?? '');
-    _rfCodeController = TextEditingController(text: specificSettings['rfCode'] ?? '');
-    _rfProtocolController = TextEditingController(text: specificSettings['rfProtocol'] ?? '6');
+    _telegramTokenController =
+        TextEditingController(text: specificSettings['telegramBotToken'] ?? '');
+    _telegramChatIdController =
+        TextEditingController(text: specificSettings['telegramChatId'] ?? '');
+    _rfCodeController =
+        TextEditingController(text: specificSettings['rfCode'] ?? '');
+    _rfProtocolController =
+        TextEditingController(text: specificSettings['rfProtocol'] ?? '6');
   }
 
   @override
@@ -56,7 +60,8 @@ class _ModuleEditScreenState extends State<ModuleEditScreen> {
     if (value == null || value.isEmpty) {
       return 'O endereço IP não pode ser vazio.';
     }
-    final ipRegex = RegExp(r'^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$');
+    final ipRegex = RegExp(
+        r'^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$');
     if (!ipRegex.hasMatch(value)) {
       return 'Formato de endereço IP inválido.';
     }
@@ -73,7 +78,9 @@ class _ModuleEditScreenState extends State<ModuleEditScreen> {
   Future<void> _saveModule() async {
     if (!_formKey.currentState!.validate()) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Por favor, corrija os erros no formulário.'), backgroundColor: Colors.orange),
+        const SnackBar(
+            content: Text('Por favor, corrija os erros no formulário.'),
+            backgroundColor: Colors.orange),
       );
       return;
     }
@@ -103,13 +110,17 @@ class _ModuleEditScreenState extends State<ModuleEditScreen> {
 
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Módulo salvo com sucesso!'), backgroundColor: Colors.green),
+        const SnackBar(
+            content: Text('Módulo salvo com sucesso!'),
+            backgroundColor: Colors.green),
       );
       Navigator.of(context).pop(true);
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Erro ao salvar módulo: $e'), backgroundColor: Colors.red),
+        SnackBar(
+            content: Text('Erro ao salvar módulo: $e'),
+            backgroundColor: Colors.red),
       );
     }
   }
@@ -118,7 +129,8 @@ class _ModuleEditScreenState extends State<ModuleEditScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.module == null ? 'Adicionar Módulo' : 'Editar Módulo'),
+        title:
+            Text(widget.module == null ? 'Adicionar Módulo' : 'Editar Módulo'),
         actions: [
           IconButton(
             icon: const Icon(Icons.save),
@@ -134,11 +146,13 @@ class _ModuleEditScreenState extends State<ModuleEditScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Text('Informações Gerais', style: Theme.of(context).textTheme.titleLarge),
+              Text('Informações Gerais',
+                  style: Theme.of(context).textTheme.titleLarge),
               const SizedBox(height: 16),
               TextFormField(
                 controller: _nameController,
-                decoration: const InputDecoration(labelText: 'Nome/Identificador do Módulo'),
+                decoration: const InputDecoration(
+                    labelText: 'Nome/Identificador do Módulo'),
                 validator: _validateNotEmpty,
               ),
               const SizedBox(height: 16),
@@ -150,7 +164,7 @@ class _ModuleEditScreenState extends State<ModuleEditScreen> {
               ),
               const SizedBox(height: 16),
               DropdownButtonFormField<ModuleType>(
-                value: _selectedModuleType,
+                initialValue: _selectedModuleType,
                 decoration: const InputDecoration(labelText: 'Tipo de Módulo'),
                 items: ModuleType.values.map((type) {
                   return DropdownMenuItem(
@@ -180,7 +194,8 @@ class _ModuleEditScreenState extends State<ModuleEditScreen> {
   List<Widget> _buildSpecificSettingsFields() {
     if (_selectedModuleType == ModuleType.wt32Eth01) {
       return [
-        Text('Configurações Específicas', style: Theme.of(context).textTheme.titleLarge),
+        Text('Configurações Específicas',
+            style: Theme.of(context).textTheme.titleLarge),
         const SizedBox(height: 16),
         TextFormField(
           controller: _telegramTokenController,
@@ -196,7 +211,8 @@ class _ModuleEditScreenState extends State<ModuleEditScreen> {
         const SizedBox(height: 16),
         TextFormField(
           controller: _rfCodeController,
-          decoration: const InputDecoration(labelText: 'Código RF da Campainha'),
+          decoration:
+              const InputDecoration(labelText: 'Código RF da Campainha'),
           keyboardType: TextInputType.number,
           validator: _validateNotEmpty,
         ),

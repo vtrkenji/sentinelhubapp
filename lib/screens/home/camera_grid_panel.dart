@@ -13,14 +13,10 @@ class CameraGridPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Calcula a proporção para um layout próximo de 16:9
     const double crossAxisSpacing = 8.0;
     const double mainAxisSpacing = 8.0;
-    const int crossAxisCount = 3;
-    final screenWidth = MediaQuery.of(context).size.width; // Ocupa 100% agora
-    final itemWidth = (screenWidth - (crossAxisSpacing * (crossAxisCount + 1))) / crossAxisCount;
-    final itemHeight = itemWidth / (16 / 9);
-    final childAspectRatio = itemWidth / itemHeight;
+    final int crossAxisCount = MediaQuery.of(context).size.width > 600 ? 2 : 1;
+    const double childAspectRatio = 16 / 9;
 
     return Container(
       color: Theme.of(context).scaffoldBackgroundColor,

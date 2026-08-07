@@ -66,4 +66,21 @@ class Camera {
       bitrate: bitrate ?? this.bitrate,
     );
   }
+
+  String get activeRtspUrl {
+    final secondary = rtspUrlSecondary?.trim();
+    if (secondary?.isNotEmpty == true && isValidRtspUrl(secondary!)) {
+      return secondary;
+    }
+    return rtspUrl.trim();
+  }
+
+  bool get hasValidRtspUrl => isValidRtspUrl(activeRtspUrl);
+
+  static bool isValidRtspUrl(String url) {
+    final uri = Uri.tryParse(url.trim());
+    return uri != null &&
+        uri.scheme.toLowerCase() == 'rtsp' &&
+        uri.host.isNotEmpty;
+  }
 }

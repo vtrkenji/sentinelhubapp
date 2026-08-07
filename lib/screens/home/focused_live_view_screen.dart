@@ -35,12 +35,13 @@ class _FocusedLiveViewScreenState extends State<FocusedLiveViewScreen> {
 
     // FIX: Evita crash da thread de renderização no Linux
     if (_player.platform is NativePlayer) {
-      await (_player.platform as NativePlayer).setProperty('hwdec', 'auto-safe');
+      await (_player.platform as NativePlayer)
+          .setProperty('hwdec', 'auto-safe');
     }
-    
+
     // Conecta-se à stream principal (alta resolução)
     await _player.open(Media(widget.camera.rtspUrl), play: true);
-    if(mounted) {
+    if (mounted) {
       setState(() {
         _isInitialized = true;
       });

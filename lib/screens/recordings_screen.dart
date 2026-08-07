@@ -12,42 +12,77 @@ class RecordingsScreen extends StatefulWidget {
 }
 
 class _RecordingsScreenState extends State<RecordingsScreen> {
-  late CameraService _cameraService;
-  late DVRService _dvrService;
-  late Camera _selectedCamera;
+  final CameraService _cameraService = CameraService();
+  final DVRService _dvrService = DVRService();
+
+  Camera? _selectedCamera;
+  List<Camera> _cameras = [];
+
   late DateTime _selectedDate;
   List<Recording> _recordings = [];
-  bool _isLoading = false;
+  bool _isLoading = true;
+  String? _errorMessage;
 
   @override
   void initState() {
     super.initState();
-    _cameraService = CameraService();
-    _dvrService = DVRService();
-    _selectedCamera = _cameraService.getAllCameras().first;
     _selectedDate = DateTime.now();
-    _fetchRecordings();
+    _loadInitialData();
+  }
+
+  Future<void> _loadInitialData() async {
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+    try {
+      final cameras = await _cameraService.getCameras();
+      if (!mounted) return;
+
+      setState(() {
+        _cameras = cameras;
+        if (_cameras.isNotEmpty) {
+          _selectedCamera = _cameras.first;
+          _fetchRecordings();
+        } else {
+          _isLoading = false;
+          _errorMessage =
+              'Nenhuma câmera encontrada. Adicione uma nas configurações.';
+        }
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _isLoading = false;
+        _errorMessage = 'Erro ao carregar câmeras: $e';
+      });
+    }
   }
 
   Future<void> _fetchRecordings() async {
-    setState(() => _isLoading = true);
+    if (_selectedCamera == null) return;
+
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
     try {
       final recordings = await _dvrService.getRecordings(
-        cameraId: _selectedCamera.id,
+        cameraId: _selectedCamera!.id,
         startDate: _selectedDate,
         endDate: _selectedDate.add(const Duration(days: 1)),
       );
+      if (!mounted) return;
       setState(() {
         _recordings = recordings;
         _isLoading = false;
       });
     } catch (e) {
-      setState(() => _isLoading = false);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erro: $e')),
-        );
-      }
+      if (!mounted) return;
+      setState(() {
+        _isLoading = false;
+        _errorMessage = 'Erro ao buscar gravações: $e';
+      });
     }
   }
 
@@ -60,76 +95,108 @@ class _RecordingsScreenState extends State<RecordingsScreen> {
       ),
       body: Column(
         children: [
-          Container(
-            padding: const EdgeInsets.all(16),
-            color: const Color(0xFF1F2233),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'CÂMERA',
-                  style: TextStyle(
-                    color: Colors.cyanAccent,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 12,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                DropdownButton<Camera>(
-                  isExpanded: true,
-                  value: _selectedCamera,
-                  dropdownColor: const Color(0xFF1F2233),
-                  style: const TextStyle(color: Colors.white),
-                  items: _cameraService.getAllCameras().map((camera) {
-                    return DropdownMenuItem(
-                      value: camera,
-                      child: Text(camera.name),
-                    );
-                  }).toList(),
-                  onChanged: (camera) {
-                    if (camera != null) {
-                      setState(() => _selectedCamera = camera);
-                      _fetchRecordings();
-                    }
-                  },
-                ),
-              ],
-            ),
-          ),
+          _buildControls(),
           Expanded(
-            child: _isLoading
-                ? const Center(
-                    child: CircularProgressIndicator(color: Colors.cyanAccent),
-                  )
-                : _recordings.isEmpty
-                    ? Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              Icons.video_library_outlined,
-                              size: 64,
-                              color: Colors.grey.shade600,
-                            ),
-                            const SizedBox(height: 16),
-                            const Text(
-                              'Nenhuma gravação encontrada',
-                              style: TextStyle(color: Colors.grey),
-                            ),
-                          ],
-                        ),
-                      )
-                    : ListView.builder(
-                        padding: const EdgeInsets.all(12),
-                        itemCount: _recordings.length,
-                        itemBuilder: (_, index) {
-                          final recording = _recordings[index];
-                          return _buildRecordingItem(recording);
-                        },
-                      ),
+            child: _buildContent(),
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildControls() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      color: const Color(0xFF1F2233),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'CÂMERA',
+            style: TextStyle(
+              color: Colors.cyanAccent,
+              fontWeight: FontWeight.bold,
+              fontSize: 12,
+            ),
+          ),
+          const SizedBox(height: 8),
+          // Usar um DropdownButtonFormField para lidar com estado inicial nulo
+          if (_cameras.isNotEmpty)
+            DropdownButton<Camera>(
+              isExpanded: true,
+              value: _selectedCamera,
+              dropdownColor: const Color(0xFF1F2233),
+              style: const TextStyle(color: Colors.white),
+              items: _cameras.map((camera) {
+                return DropdownMenuItem(
+                  value: camera,
+                  child: Text(camera.name),
+                );
+              }).toList(),
+              onChanged: (camera) {
+                if (camera != null && camera != _selectedCamera) {
+                  setState(() => _selectedCamera = camera);
+                  _fetchRecordings();
+                }
+              },
+            )
+          else
+            const Text(
+              'Nenhuma câmera disponível',
+              style: TextStyle(color: Colors.grey),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildContent() {
+    if (_isLoading) {
+      return const Center(
+        child: CircularProgressIndicator(color: Colors.cyanAccent),
+      );
+    }
+
+    if (_errorMessage != null) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Text(
+            _errorMessage!,
+            style: const TextStyle(color: Colors.red),
+            textAlign: TextAlign.center,
+          ),
+        ),
+      );
+    }
+
+    if (_recordings.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.video_library_outlined,
+              size: 64,
+              color: Colors.grey.shade600,
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'Nenhuma gravação encontrada',
+              style: TextStyle(color: Colors.grey),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return ListView.builder(
+      padding: const EdgeInsets.all(12),
+      itemCount: _recordings.length,
+      itemBuilder: (_, index) {
+        final recording = _recordings[index];
+        return _buildRecordingItem(recording);
+      },
     );
   }
 
@@ -139,7 +206,7 @@ class _RecordingsScreenState extends State<RecordingsScreen> {
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: const Color(0xFF1F2233),
-        border: Border.all(color: Colors.orangeAccent.withOpacity(0.3)),
+        border: Border.all(color: Colors.orangeAccent.withAlpha(77)),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Column(
