@@ -22,8 +22,10 @@ class _CameraEditScreenState extends State<CameraEditScreen> {
   void initState() {
     super.initState();
     _nameController = TextEditingController(text: widget.camera?.name ?? '');
-    _rtspUrlController = TextEditingController(text: widget.camera?.rtspUrl ?? '');
-    _descriptionController = TextEditingController(text: widget.camera?.description ?? '');
+    _rtspUrlController =
+        TextEditingController(text: widget.camera?.rtspUrl ?? '');
+    _descriptionController =
+        TextEditingController(text: widget.camera?.description ?? '');
   }
 
   @override
@@ -37,7 +39,8 @@ class _CameraEditScreenState extends State<CameraEditScreen> {
   Future<void> _saveCamera() async {
     if (_formKey.currentState?.validate() ?? false) {
       final newCamera = Camera(
-        id: widget.camera?.id ?? 0, // ID will be assigned by service for new cameras
+        id: widget.camera?.id ??
+            0, // ID will be assigned by service for new cameras
         name: _nameController.text.trim(),
         rtspUrl: _rtspUrlController.text.trim(),
         description: _descriptionController.text.trim(),
@@ -53,7 +56,9 @@ class _CameraEditScreenState extends State<CameraEditScreen> {
 
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Câmera ${widget.camera == null ? 'adicionada' : 'atualizada'} com sucesso!')),
+        SnackBar(
+            content: Text(
+                'Câmera ${widget.camera == null ? 'adicionada' : 'atualizada'} com sucesso!')),
       );
       Navigator.pop(context, true); // Pop with true to indicate success
     }
@@ -63,7 +68,8 @@ class _CameraEditScreenState extends State<CameraEditScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.camera == null ? 'ADICIONAR CÂMERA' : 'EDITAR CÂMERA'),
+        title:
+            Text(widget.camera == null ? 'ADICIONAR CÂMERA' : 'EDITAR CÂMERA'),
         backgroundColor: Theme.of(context).colorScheme.surface,
       ),
       body: Padding(
@@ -87,11 +93,15 @@ class _CameraEditScreenState extends State<CameraEditScreen> {
                 controller: _rtspUrlController,
                 decoration: const InputDecoration(labelText: 'URL RTSP'),
                 validator: (value) {
-                  if (value == null || value.isEmpty) {
+                  final trimmedValue = value?.trim() ?? '';
+                  if (trimmedValue.isEmpty) {
                     return 'Por favor, insira a URL RTSP';
                   }
-                  if (!value.startsWith('rtsp://')) {
-                    return 'A URL deve começar com "rtsp://"';
+                  final uri = Uri.tryParse(trimmedValue);
+                  if (uri == null ||
+                      uri.scheme.toLowerCase() != 'rtsp' ||
+                      uri.host.isEmpty) {
+                    return 'A URL RTSP deve ser válida e conter host/porta';
                   }
                   return null;
                 },
@@ -99,7 +109,8 @@ class _CameraEditScreenState extends State<CameraEditScreen> {
               const SizedBox(height: 16),
               TextFormField(
                 controller: _descriptionController,
-                decoration: const InputDecoration(labelText: 'Descrição (opcional)'),
+                decoration:
+                    const InputDecoration(labelText: 'Descrição (opcional)'),
                 maxLines: 3,
               ),
               const SizedBox(height: 32),

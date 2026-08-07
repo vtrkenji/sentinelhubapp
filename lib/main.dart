@@ -45,7 +45,6 @@ class SentinelApp extends StatelessWidget {
           secondary: Colors.cyanAccent,
           surface: AppConfig.cardColor,
           onSurface: Colors.white,
-          background: AppConfig.backgroundColor,
         ),
         inputDecorationTheme: const InputDecorationTheme(
           border: OutlineInputBorder(),

@@ -6,7 +6,9 @@ class Esp32Service {
   /// Retorna `true` se o dispositivo responder com status 200, `false` caso contrário.
   Future<bool> checkStatus(String ip) async {
     try {
-      final response = await http.get(Uri.parse('http://$ip/status')).timeout(const Duration(seconds: 3));
+      final response = await http
+          .get(Uri.parse('http://$ip/status'))
+          .timeout(const Duration(seconds: 3));
       return response.statusCode == 200;
     } catch (e) {
       // Em qualquer caso de erro, consideramos o dispositivo offline.
@@ -20,7 +22,9 @@ class Esp32Service {
   /// Retorna a resposta do corpo da requisição em caso de sucesso, ou uma mensagem de erro.
   Future<String> triggerRelay(String ip) async {
     try {
-      final response = await http.post(Uri.parse('http://$ip/trigger')).timeout(const Duration(seconds: 5));
+      final response = await http
+          .post(Uri.parse('http://$ip/trigger'))
+          .timeout(const Duration(seconds: 5));
       if (response.statusCode == 200) {
         return response.body; // Retorna a mensagem de sucesso do ESP32
       } else {

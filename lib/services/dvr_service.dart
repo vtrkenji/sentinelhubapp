@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import '../models/camera.dart';
 import '../models/recording.dart';
@@ -83,7 +82,6 @@ class DVRService {
 
       return recordings;
     } catch (e) {
-      debugPrint('Erro ao buscar gravações: $e');
       rethrow;
     }
   }
@@ -95,8 +93,7 @@ class DVRService {
           .get(Uri.parse('http://$dvrHost/api/status'))
           .timeout(const Duration(seconds: 5));
       return response.statusCode == 200;
-    } catch (e) {
-      debugPrint('Erro ao verificar status do DVR: $e');
+    } catch (_) {
       return false;
     }
   }
