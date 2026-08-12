@@ -176,7 +176,7 @@
             </div>
 
             <div class="status-badge">
-                Última Release: <span id="git-version">v1.0.3-stable</span>
+                Última Release: <span id="git-version">Buscando...</span>
             </div>
 
             <div class="os-header">
@@ -251,6 +251,18 @@
     </div>
 
     <script>
+        // BUSA A VERSÃO LATEST DIRETO DO GITHUB
+        fetch('https://api.github.com/repos/vtrkenji/sentinelhubapp/releases/latest')
+            .then(response => response.json())
+            .then(data => {
+                if (data.tag_name) {
+                    document.getElementById('git-version').innerText = data.tag_name;
+                }
+            })
+            .catch(error => {
+                document.getElementById('git-version').innerText = 'v1.0.0';
+            });
+
         function switchTab(tabId, element) {
             document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
             document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));

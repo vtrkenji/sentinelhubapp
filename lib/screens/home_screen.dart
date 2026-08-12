@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'settings_screen.dart';
+import 'update/update_screen.dart';
 import '../config/app_config.dart';
 import '../models/camera.dart';
 import '../services/camera_service.dart';
@@ -126,14 +127,12 @@ class _HomeScreenState extends State<HomeScreen> {
               tooltip: 'Recarregar Câmeras',
             ),
           IconButton(
-            icon: const Icon(Icons.settings),
-            tooltip: 'Configurações',
+            icon: const Icon(Icons.system_update_alt),
+            tooltip: 'Buscar Atualizações',
             onPressed: () {
-              Navigator.of(context)
-                  .push(
-                    MaterialPageRoute(builder: (context) => const SettingsScreen()),
-                  )
-                  .then((_) => _reloadCameras());
+              Navigator.of(context).push(
+                MaterialPageRoute(builder: (context) => const UpdateScreen()),
+              );
             },
           ),
         ],
