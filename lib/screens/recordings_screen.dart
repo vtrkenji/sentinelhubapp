@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../config/app_config.dart';
 import '../models/camera.dart';
 import '../models/recording.dart';
 import '../services/camera_service.dart';
@@ -91,7 +92,7 @@ class _RecordingsScreenState extends State<RecordingsScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('GRAVAÇÕES'),
-        backgroundColor: const Color(0xFF1F2233),
+        backgroundColor: AppConfig.cardColor,
       ),
       body: Column(
         children: [
@@ -107,14 +108,14 @@ class _RecordingsScreenState extends State<RecordingsScreen> {
   Widget _buildControls() {
     return Container(
       padding: const EdgeInsets.all(16),
-      color: const Color(0xFF1F2233),
+      color: AppConfig.cardColor,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             'CÂMERA',
             style: TextStyle(
-              color: Colors.cyanAccent,
+              color: AppConfig.accentColor,
               fontWeight: FontWeight.bold,
               fontSize: 12,
             ),
@@ -125,8 +126,8 @@ class _RecordingsScreenState extends State<RecordingsScreen> {
             DropdownButton<Camera>(
               isExpanded: true,
               value: _selectedCamera,
-              dropdownColor: const Color(0xFF1F2233),
-              style: const TextStyle(color: Colors.white),
+              dropdownColor: AppConfig.cardColor,
+              style: TextStyle(color: AppConfig.textColor),
               items: _cameras.map((camera) {
                 return DropdownMenuItem(
                   value: camera,
@@ -143,7 +144,7 @@ class _RecordingsScreenState extends State<RecordingsScreen> {
           else
             const Text(
               'Nenhuma câmera disponível',
-              style: TextStyle(color: Colors.grey),
+              style: TextStyle(color: AppConfig.mutedTextColor),
             ),
         ],
       ),
@@ -163,7 +164,7 @@ class _RecordingsScreenState extends State<RecordingsScreen> {
           padding: const EdgeInsets.all(16.0),
           child: Text(
             _errorMessage!,
-            style: const TextStyle(color: Colors.red),
+            style: TextStyle(color: AppConfig.alertColor),
             textAlign: TextAlign.center,
           ),
         ),
@@ -178,12 +179,12 @@ class _RecordingsScreenState extends State<RecordingsScreen> {
             Icon(
               Icons.video_library_outlined,
               size: 64,
-              color: Colors.grey.shade600,
+              color: AppConfig.mutedTextColor,
             ),
             const SizedBox(height: 16),
-            const Text(
+            Text(
               'Nenhuma gravação encontrada',
-              style: TextStyle(color: Colors.grey),
+              style: TextStyle(color: AppConfig.mutedTextColor),
             ),
           ],
         ),
@@ -205,8 +206,8 @@ class _RecordingsScreenState extends State<RecordingsScreen> {
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: const Color(0xFF1F2233),
-        border: Border.all(color: Colors.orangeAccent.withAlpha(77)),
+        color: AppConfig.cardColor,
+        border: Border.all(color: AppConfig.accentColor.withAlpha(0.24)),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Column(
@@ -214,7 +215,7 @@ class _RecordingsScreenState extends State<RecordingsScreen> {
         children: [
           Row(
             children: [
-              const Icon(Icons.play_circle, color: Colors.orangeAccent),
+              const Icon(Icons.play_circle, color: AppConfig.accentColor),
               const SizedBox(width: 12),
               Expanded(
                 child: Text(
@@ -230,7 +231,7 @@ class _RecordingsScreenState extends State<RecordingsScreen> {
           const SizedBox(height: 8),
           Text(
             'Tamanho: ${recording.formattedSize}',
-            style: const TextStyle(color: Colors.grey, fontSize: 12),
+            style: TextStyle(color: AppConfig.mutedTextColor, fontSize: 12),
           ),
         ],
       ),

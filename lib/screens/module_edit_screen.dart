@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:sentinel_hub/config/app_config.dart';
 import 'package:sentinel_hub/models/hardware_module.dart';
 import 'package:sentinel_hub/services/module_service.dart';
 
@@ -17,8 +18,6 @@ class _ModuleEditScreenState extends State<ModuleEditScreen> {
 
   late TextEditingController _nameController;
   late TextEditingController _ipController;
-  late TextEditingController _telegramTokenController;
-  late TextEditingController _telegramChatIdController;
   late TextEditingController _rfCodeController;
   late TextEditingController _rfProtocolController;
 
@@ -35,10 +34,6 @@ class _ModuleEditScreenState extends State<ModuleEditScreen> {
 
     // Initialize controllers for specific settings
     final specificSettings = module?.specificSettings ?? {};
-    _telegramTokenController =
-        TextEditingController(text: specificSettings['telegramBotToken'] ?? '');
-    _telegramChatIdController =
-        TextEditingController(text: specificSettings['telegramChatId'] ?? '');
     _rfCodeController =
         TextEditingController(text: specificSettings['rfCode'] ?? '');
     _rfProtocolController =
@@ -49,8 +44,6 @@ class _ModuleEditScreenState extends State<ModuleEditScreen> {
   void dispose() {
     _nameController.dispose();
     _ipController.dispose();
-    _telegramTokenController.dispose();
-    _telegramChatIdController.dispose();
     _rfCodeController.dispose();
     _rfProtocolController.dispose();
     super.dispose();
@@ -78,9 +71,10 @@ class _ModuleEditScreenState extends State<ModuleEditScreen> {
   Future<void> _saveModule() async {
     if (!_formKey.currentState!.validate()) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-            content: Text('Por favor, corrija os erros no formulário.'),
-            backgroundColor: Colors.orange),
+        SnackBar(
+            content: const Text('Por favor, corrija os erros no formulário.'),
+            backgroundColor: AppConfig.accentColor.withOpacity(0.14),
+            behavior: SnackBarBehavior.floating),
       );
       return;
     }
@@ -88,8 +82,6 @@ class _ModuleEditScreenState extends State<ModuleEditScreen> {
     try {
       final specificSettings = <String, dynamic>{};
       if (_selectedModuleType == ModuleType.wt32Eth01) {
-        specificSettings['telegramBotToken'] = _telegramTokenController.text;
-        specificSettings['telegramChatId'] = _telegramChatIdController.text;
         specificSettings['rfCode'] = _rfCodeController.text;
         specificSettings['rfProtocol'] = _rfProtocolController.text;
       }
@@ -110,9 +102,10 @@ class _ModuleEditScreenState extends State<ModuleEditScreen> {
 
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-            content: Text('Módulo salvo com sucesso!'),
-            backgroundColor: Colors.green),
+        SnackBar(
+            content: const Text('Módulo salvo com sucesso!'),
+            backgroundColor: AppConfig.accentColor.withOpacity(0.16),
+            behavior: SnackBarBehavior.floating),
       );
       Navigator.of(context).pop(true);
     } catch (e) {
@@ -120,7 +113,8 @@ class _ModuleEditScreenState extends State<ModuleEditScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
             content: Text('Erro ao salvar módulo: $e'),
-            backgroundColor: Colors.red),
+            backgroundColor: AppConfig.alertColor.withOpacity(0.16),
+            behavior: SnackBarBehavior.floating),
       );
     }
   }
@@ -192,22 +186,11 @@ class _ModuleEditScreenState extends State<ModuleEditScreen> {
   }
 
   List<Widget> _buildSpecificSettingsFields() {
-    if (_selectedModuleType == ModuleType.wt32Eth01) {
+    if (_selectedModuleType == ModuleType.wt32Eth01 ||
+        _selectedModuleType == ModuleType.rfGateway) {
       return [
         Text('Configurações Específicas',
             style: Theme.of(context).textTheme.titleLarge),
-        const SizedBox(height: 16),
-        TextFormField(
-          controller: _telegramTokenController,
-          decoration: const InputDecoration(labelText: 'Telegram Bot Token'),
-          validator: _validateNotEmpty,
-        ),
-        const SizedBox(height: 16),
-        TextFormField(
-          controller: _telegramChatIdController,
-          decoration: const InputDecoration(labelText: 'Telegram Chat ID'),
-          validator: _validateNotEmpty,
-        ),
         const SizedBox(height: 16),
         TextFormField(
           controller: _rfCodeController,

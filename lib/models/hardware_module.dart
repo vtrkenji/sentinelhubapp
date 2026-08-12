@@ -1,5 +1,5 @@
 enum ModuleType {
-  wt32Eth01, // Para o gateway com Telegram e campainha RF
+  wt32Eth01, // Para gateway com campainha RF
   genericEsp32, // Para outros dispositivos ESP32 genéricos
   rfGateway, // Focado apenas em RF
   pirSensor,
@@ -10,7 +10,7 @@ extension ModuleTypeExtension on ModuleType {
   String get displayName {
     switch (this) {
       case ModuleType.wt32Eth01:
-        return 'Gateway WT32-ETH01 (Telegram/RF)';
+        return 'Gateway WT32-ETH01 (RF)';
       case ModuleType.genericEsp32:
         return 'Módulo ESP32 Genérico';
       case ModuleType.rfGateway:

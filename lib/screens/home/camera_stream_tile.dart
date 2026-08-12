@@ -2,7 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:media_kit/media_kit.dart';
 import 'package:media_kit_video/media_kit_video.dart';
 import 'package:sentinel_hub/screens/settings_screen.dart';
+
+import '../../config/app_config.dart';
 import '../../models/camera.dart';
+import '../../utils/video_controller_config.dart';
 
 class CameraStreamTile extends StatefulWidget {
   final Camera camera;
@@ -52,9 +55,7 @@ class _CameraStreamTileState extends State<CameraStreamTile> {
           configuration: const PlayerConfiguration(logLevel: MPVLogLevel.warn));
       _videoController = VideoController(
         _player!,
-        configuration: const VideoControllerConfiguration(
-          enableHardwareAcceleration: true,
-        ),
+        configuration: getVideoControllerConfiguration(),
       );
 
       await _player!.setVolume(0);
@@ -129,10 +130,10 @@ class _CameraStreamTileState extends State<CameraStreamTile> {
   Widget build(BuildContext context) {
     return Card(
       clipBehavior: Clip.antiAlias,
-      color: Colors.black,
+      color: AppConfig.cardColor,
       shape: RoundedRectangleBorder(
-        side: const BorderSide(color: Colors.white12, width: 1),
-        borderRadius: BorderRadius.circular(8),
+        side: BorderSide(color: AppConfig.accentColor.withOpacity(0.12), width: 1),
+        borderRadius: BorderRadius.circular(12),
       ),
       child: _isPlaying && _videoController != null
           ? _buildPlayerView()
@@ -151,22 +152,22 @@ class _CameraStreamTileState extends State<CameraStreamTile> {
             children: [
               Icon(
                 _hasError ? Icons.error_outline : Icons.videocam_off_outlined,
-                color: _hasError ? Colors.red : Colors.white70,
+                color: _hasError ? AppConfig.alertColor : AppConfig.accentColor.withOpacity(0.92),
                 size: 36,
               ),
               const SizedBox(height: 6),
               Text(
                 widget.camera.name,
-                style: const TextStyle(
-                    color: Colors.white,
+                style: TextStyle(
+                    color: AppConfig.textColor,
                     fontWeight: FontWeight.bold,
                     fontSize: 13),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 2),
               if (_hasError)
-                const Text('Erro de conexão',
-                    style: TextStyle(color: Colors.red, fontSize: 11)),
+                Text('Erro de conexão',
+                    style: TextStyle(color: AppConfig.alertColor, fontSize: 11)),
               const SizedBox(height: 8),
               ElevatedButton.icon(
                 onPressed: _isConnecting ? null : _connect,
@@ -193,7 +194,22 @@ class _CameraStreamTileState extends State<CameraStreamTile> {
     return Stack(
       fit: StackFit.expand,
       children: [
+        Container(color: AppConfig.backgroundColor),
         Video(controller: _videoController!, fit: BoxFit.cover),
+
+        if (_hasError)
+          Container(
+            color: AppConfig.backgroundColor.withOpacity(0.75),
+            alignment: Alignment.center,
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Text(
+                'Erro ao exibir vídeo.\nVerifique a câmera e a conexão.',
+                style: TextStyle(color: AppConfig.textColor, fontSize: 14),
+                textAlign: TextAlign.center,
+              ),
+            ),
+          ),
 
         StreamBuilder<bool>(
           stream: _player!.stream.buffering,
@@ -212,7 +228,6 @@ class _CameraStreamTileState extends State<CameraStreamTile> {
           },
         ),
 
-        // Header limpo e sem conflito de layout
         Positioned(
           top: 0,
           left: 0,
@@ -224,7 +239,7 @@ class _CameraStreamTileState extends State<CameraStreamTile> {
               gradient: LinearGradient(
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
-                colors: [Colors.black.withAlpha(200), Colors.transparent],
+                colors: [AppConfig.backgroundColor.withAlpha(220), AppConfig.backgroundColor.withAlpha(0)],
               ),
             ),
             child: Row(
@@ -247,7 +262,7 @@ class _CameraStreamTileState extends State<CameraStreamTile> {
                         width: 8,
                         height: 8,
                         decoration: BoxDecoration(
-                          color: _hasError ? Colors.red : Colors.green.shade400,
+                          color: _hasError ? AppConfig.alertColor : AppConfig.accentColor,
                           shape: BoxShape.circle,
                         ),
                       ),
@@ -255,12 +270,12 @@ class _CameraStreamTileState extends State<CameraStreamTile> {
                       Flexible(
                         child: Text(
                           widget.camera.name,
-                          style: const TextStyle(
-                            color: Colors.white,
+                          style: TextStyle(
+                            color: AppConfig.textColor,
                             fontWeight: FontWeight.bold,
                             fontSize: 12,
                             shadows: [
-                              Shadow(blurRadius: 2.0, color: Colors.black)
+                              Shadow(blurRadius: 2.0, color: AppConfig.backgroundColor),
                             ],
                           ),
                           overflow: TextOverflow.ellipsis,
@@ -276,7 +291,7 @@ class _CameraStreamTileState extends State<CameraStreamTile> {
                       icon: Icon(_isMuted ? Icons.volume_off : Icons.volume_up),
                       onPressed: _toggleMute,
                       iconSize: 18,
-                      color: Colors.white,
+                      color: AppConfig.textColor,
                       style: _compactButtonStyle,
                     ),
                     const SizedBox(width: 2),
@@ -289,7 +304,7 @@ class _CameraStreamTileState extends State<CameraStreamTile> {
                         );
                       },
                       iconSize: 18,
-                      color: Colors.white,
+                      color: AppConfig.accentColor,
                       style: _compactButtonStyle,
                     ),
                   ],

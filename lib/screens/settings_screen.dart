@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import '../config/app_config.dart';
 import '../models/camera.dart';
 import '../services/camera_service.dart';
 import 'camera_edit_screen.dart';
 import '../models/hardware_module.dart';
 import '../services/module_service.dart';
+import 'esp32_config_screen.dart';
 import 'module_edit_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -28,7 +30,7 @@ class _SettingsScreenState extends State<SettingsScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
+    _tabController = TabController(length: 3, vsync: this);
     _tabController.addListener(_handleTabChanged);
     _loadCameras();
     _loadModules();
@@ -63,12 +65,13 @@ class _SettingsScreenState extends State<SettingsScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Central de Configurações'),
+        title: const Text('VSGuard OS • Configurações'),
         bottom: TabBar(
           controller: _tabController,
           tabs: const [
             Tab(icon: Icon(Icons.videocam), text: 'Câmeras'),
             Tab(icon: Icon(Icons.developer_board), text: 'Módulos'),
+            Tab(icon: Icon(Icons.wifi), text: 'ESP32'),
           ],
         ),
       ),
@@ -77,13 +80,17 @@ class _SettingsScreenState extends State<SettingsScreen>
         children: [
           _buildCamerasTab(context),
           _buildModulesTab(context),
+          const Esp32ConfigBody(),
         ],
       ),
       floatingActionButton: _buildFloatingActionButton(),
     );
   }
 
-  Widget _buildFloatingActionButton() {
+  Widget? _buildFloatingActionButton() {
+    if (_tabController.index == 2) {
+      return null;
+    }
     return FloatingActionButton(
       onPressed: _tabController.index == 0
           ? () => _editCamera(null)
@@ -131,7 +138,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                       onPressed: () => _editCamera(camera),
                     ),
                     IconButton(
-                      icon: const Icon(Icons.delete, color: Colors.redAccent),
+                      icon: Icon(Icons.delete, color: AppConfig.alertColor),
                       tooltip: 'Remover Câmera',
                       onPressed: () => _deleteCamera(camera.id),
                     ),
@@ -228,7 +235,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                       onPressed: () => _editModule(module),
                     ),
                     IconButton(
-                      icon: const Icon(Icons.delete, color: Colors.redAccent),
+                      icon: Icon(Icons.delete, color: AppConfig.alertColor),
                       tooltip: 'Remover Módulo',
                       onPressed: () => _deleteModule(module.id),
                     ),
