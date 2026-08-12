@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:media_kit/media_kit.dart';
 import 'package:media_kit_video/media_kit_video.dart';
+
 import '../models/camera.dart';
+import '../utils/video_controller_config.dart';
 
 class LiveViewScreen extends StatefulWidget {
   final Camera camera;
@@ -27,9 +29,7 @@ class _LiveViewScreenState extends State<LiveViewScreen> {
     );
     _videoController = VideoController(
       _player,
-      configuration: const VideoControllerConfiguration(
-        enableHardwareAcceleration: false,
-      ),
+      configuration: getVideoControllerConfiguration(),
     );
 
     // 2. Inicialização assíncrona garantindo o CPU decoding prévio
@@ -69,27 +69,33 @@ class _LiveViewScreenState extends State<LiveViewScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.camera.name),
-        backgroundColor: const Color(0xFF1F2233),
+        backgroundColor: AppConfig.cardColor,
         elevation: 0,
       ),
-      body: StreamBuilder<Object>(
-        stream: _player.stream.error,
-        builder: (context, errorSnapshot) {
-          if (errorSnapshot.hasData) {
-            return Center(
-                child: Text('Erro: ${errorSnapshot.data.toString()}'));
-          }
-          return StreamBuilder<bool>(
-            stream: _player.stream.buffering,
-            builder: (context, bufferingSnapshot) {
-              final isBuffering = bufferingSnapshot.data ?? true;
-              if (isBuffering) {
-                return const Center(child: CircularProgressIndicator());
+      body: Stack(
+        fit: StackFit.expand,
+        children: [
+          Container(color: AppConfig.backgroundColor),
+          StreamBuilder<Object>(
+            stream: _player.stream.error,
+            builder: (context, errorSnapshot) {
+              if (errorSnapshot.hasData) {
+                return Center(
+                    child: Text('Erro: ${errorSnapshot.data.toString()}'));
               }
-              return Video(controller: _videoController);
+              return StreamBuilder<bool>(
+                stream: _player.stream.buffering,
+                builder: (context, bufferingSnapshot) {
+                  final isBuffering = bufferingSnapshot.data ?? true;
+                  if (isBuffering) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+                  return Video(controller: _videoController);
+                },
+              );
             },
-          );
-        },
+          ),
+        ],
       ),
     );
   }

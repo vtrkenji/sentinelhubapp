@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:media_kit/media_kit.dart';
 import 'package:media_kit_video/media_kit_video.dart';
+
+import '../../config/app_config.dart';
 import '../../models/camera.dart';
+import '../../utils/video_controller_config.dart';
 
 class FocusedLiveViewScreen extends StatefulWidget {
   final Camera camera;
@@ -27,10 +30,7 @@ class _FocusedLiveViewScreenState extends State<FocusedLiveViewScreen> {
     _player = Player();
     _videoController = VideoController(
       _player,
-      configuration: const VideoControllerConfiguration(
-        // FIX: Desativa a aceleração por hardware para evitar crashes de driver no Linux.
-        enableHardwareAcceleration: false,
-      ),
+      configuration: getVideoControllerConfiguration(),
     );
 
     // FIX: Evita crash da thread de renderização no Linux
@@ -59,16 +59,22 @@ class _FocusedLiveViewScreenState extends State<FocusedLiveViewScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text('AO VIVO: ${widget.camera.name}'),
-        backgroundColor: Colors.black,
+        backgroundColor: AppConfig.cardColor,
       ),
-      backgroundColor: Colors.black,
-      body: Center(
-        child: _isInitialized
-            ? Video(
-                controller: _videoController,
-                fit: BoxFit.contain,
-              )
-            : const CircularProgressIndicator(),
+      backgroundColor: AppConfig.backgroundColor,
+      body: Stack(
+        fit: StackFit.expand,
+        children: [
+          Container(color: AppConfig.backgroundColor),
+          Center(
+            child: _isInitialized
+                ? Video(
+                    controller: _videoController,
+                    fit: BoxFit.contain,
+                  )
+                : const CircularProgressIndicator(),
+          ),
+        ],
       ),
     );
   }

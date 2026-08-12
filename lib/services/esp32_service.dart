@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 class Esp32Service {
@@ -10,10 +11,59 @@ class Esp32Service {
           .get(Uri.parse('http://$ip/status'))
           .timeout(const Duration(seconds: 3));
       return response.statusCode == 200;
-    } catch (e) {
-      // Em qualquer caso de erro, consideramos o dispositivo offline.
-      // Em uma aplicação real, seria bom ter um log mais robusto aqui.
-      // Ex: log.error('Erro ao checar status do ESP32: $e');
+    } catch (_) {
+      return false;
+    }
+  }
+
+  Future<Map<String, dynamic>> getStatusJson(String ip) async {
+    try {
+      final response = await http
+          .get(Uri.parse('http://$ip/status'))
+          .timeout(const Duration(seconds: 3));
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body) as Map<String, dynamic>;
+      }
+    } catch (_) {}
+    return <String, dynamic>{};
+  }
+
+  Future<Map<String, dynamic>> getConfig(String ip) async {
+    try {
+      final response = await http
+          .get(Uri.parse('http://$ip/config'))
+          .timeout(const Duration(seconds: 3));
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body) as Map<String, dynamic>;
+      }
+    } catch (_) {}
+    return <String, dynamic>{};
+  }
+
+  Future<bool> updateConfig(
+    String ip,
+    String ssid,
+    String password,
+    String topic,
+  ) async {
+    try {
+      final body = jsonEncode(
+        <String, String>{
+          'ssid': ssid,
+          'password': password,
+          'topic': topic,
+        },
+      );
+      final response = await http
+          .post(
+            Uri.parse('http://$ip/updateConfig'),
+            headers: {'Content-Type': 'application/json'},
+            body: body,
+          )
+          .timeout(const Duration(seconds: 5));
+
+      return response.statusCode == 200;
+    } catch (_) {
       return false;
     }
   }
@@ -26,7 +76,7 @@ class Esp32Service {
           .post(Uri.parse('http://$ip/trigger'))
           .timeout(const Duration(seconds: 5));
       if (response.statusCode == 200) {
-        return response.body; // Retorna a mensagem de sucesso do ESP32
+        return response.body;
       } else {
         return 'Erro: Dispositivo respondeu com status ${response.statusCode}';
       }

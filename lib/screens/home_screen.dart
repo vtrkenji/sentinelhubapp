@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'settings_screen.dart';
+import '../config/app_config.dart';
 import '../models/camera.dart';
 import '../services/camera_service.dart';
 import 'home/camera_grid_panel.dart';
@@ -15,6 +16,12 @@ class _HomeScreenState extends State<HomeScreen> {
   final CameraService _cameraService = CameraService();
   List<Camera> _cameras = [];
   bool _isLoading = true;
+  int _selectedIndex = 0;
+
+  static const List<String> _pageTitles = [
+    'Painel',
+    'Configurações',
+  ];
 
   @override
   void initState() {
@@ -24,8 +31,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _loadCameras() async {
     try {
-      // Usar getCameras() que lê do novo sistema unificado se aplicável
-      // ou manter o getCamerasDynamic se for o método correto
       final cameras = await _cameraService.getCameras();
       if (mounted) {
         setState(() {
@@ -50,39 +55,107 @@ class _HomeScreenState extends State<HomeScreen> {
     _loadCameras();
   }
 
+  void _onTabSelected(int index) {
+    setState(() => _selectedIndex = index);
+  }
+
+  Widget _buildDashboard() {
+    if (_isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    if (_cameras.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.videocam_off, size: 64, color: AppConfig.mutedTextColor),
+            const SizedBox(height: 16),
+            Text(
+              'Nenhuma câmera configurada.',
+              style: TextStyle(color: AppConfig.mutedTextColor, fontSize: 16),
+            ),
+            const SizedBox(height: 8),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.of(context)
+                    .push(MaterialPageRoute(builder: (context) => const SettingsScreen()))
+                    .then((_) => _reloadCameras());
+              },
+              child: const Text('Abrir Configurações'),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return CameraGridPanel(cameras: _cameras);
+  }
+
+  List<Widget> get _pages => [
+        _buildDashboard(),
+        const SettingsScreen(),
+      ];
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('SENTINEL-HUB'),
-        backgroundColor: Theme.of(context).colorScheme.surface.withAlpha(204),
-        elevation: 1,
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('VSGuard OS'),
+            Text(
+              _pageTitles[_selectedIndex],
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                    color: AppConfig.accentColor,
+                    fontSize: 12,
+                  ),
+            ),
+          ],
+        ),
+        backgroundColor: AppConfig.cardColor.withOpacity(0.95),
+        elevation: 0,
+        iconTheme: IconThemeData(color: AppConfig.accentColor),
+        actionsIconTheme: IconThemeData(color: AppConfig.accentColor),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: _reloadCameras,
-            tooltip: 'Recarregar Câmeras',
-          ),
+          if (_selectedIndex == 0)
+            IconButton(
+              icon: const Icon(Icons.refresh),
+              onPressed: _reloadCameras,
+              tooltip: 'Recarregar Câmeras',
+            ),
           IconButton(
             icon: const Icon(Icons.settings),
             tooltip: 'Configurações',
             onPressed: () {
               Navigator.of(context)
                   .push(
-                    MaterialPageRoute(
-                        builder: (context) => const SettingsScreen()),
+                    MaterialPageRoute(builder: (context) => const SettingsScreen()),
                   )
-                  .then((_) =>
-                      _reloadCameras()); // Recarrega após fechar as configs
+                  .then((_) => _reloadCameras());
             },
           ),
         ],
       ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : CameraGridPanel(
-              cameras: _cameras,
-            ),
+      body: AnimatedSwitcher(
+        duration: const Duration(milliseconds: 250),
+        child: _pages[_selectedIndex],
+      ),
+      bottomNavigationBar: BottomNavigationBar(
+        currentIndex: _selectedIndex,
+        onTap: _onTabSelected,
+        items: const [
+          BottomNavigationBarItem(
+            icon: Icon(Icons.dashboard),
+            label: 'Painel',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.settings),
+            label: 'Configurações',
+          ),
+        ],
+      ),
     );
   }
 }
