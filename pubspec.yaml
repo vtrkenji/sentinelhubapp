@@ -28,13 +28,13 @@ dependencies:
 # --- NOTIFICAÇÕES LOCAIS E ISOLAMENTO (NOVO PLANO) ---
   flutter_background_service: ^3.0.0     # Mantém o app a ouvir a rede em segundo plano
   flutter_local_notifications: ^17.0.0   # Gera o alerta visual/sonoro no telemóvel
+  universal_platform: ^1.1.0
   # (Adeus eventsource, não precisamos de ti!)                  # Lê o protocolo SSE do ntfy.sh em tempo real
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^3.0.0
-
 dependency_overrides:
   audio_video_progress_bar: ^2.0.0
 

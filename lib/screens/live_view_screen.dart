@@ -1,7 +1,9 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:media_kit/media_kit.dart';
 import 'package:media_kit_video/media_kit_video.dart';
 
+import '../config/app_config.dart';
 import '../models/camera.dart';
 import '../utils/video_controller_config.dart';
 
@@ -39,11 +41,14 @@ class _LiveViewScreenState extends State<LiveViewScreen> {
   Future<void> _initPlayer() async {
     try {
       // 3. Aplica os parâmetros sem CUDA com AWAIT
-      if (_player.platform is NativePlayer) {
-        final native = _player.platform as NativePlayer;
-        await native.setProperty('hwdec', 'no');
-        await native.setProperty('rtsp_transport', 'tcp');
-        await native.setProperty('network-caching', '100');
+      if (!kIsWeb) {
+        // ignore: avoid_dynamic_calls
+        final dynamic native = _player.platform;
+        if (native.runtimeType.toString() == 'NativePlayer') {
+          await native.setProperty('hwdec', 'no');
+          await native.setProperty('rtsp_transport', 'tcp');
+          await native.setProperty('network-caching', '100');
+        }
       }
 
       // 4. Abre o stream em tela cheia apenas após aplicar as flags

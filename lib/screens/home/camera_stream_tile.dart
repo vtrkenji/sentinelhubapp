@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:media_kit/media_kit.dart';
 import 'package:media_kit_video/media_kit_video.dart';
@@ -68,13 +69,20 @@ class _CameraStreamTileState extends State<CameraStreamTile> {
         throw Exception('URL RTSP inválida: $streamUrl');
       }
 
-      if (_player!.platform is NativePlayer) {
-        final native = _player!.platform as NativePlayer;
-        await native.setProperty('hwdec', 'auto-safe');
-        await native.setProperty('force-seekable', 'yes');
-        await native.setProperty('untimed', 'yes');
-        await native.setProperty('demuxer-lavf-o', 'rtsp_transport=tcp');
-        await native.setProperty('network-timeout', '5');
+      try {
+        if (!kIsWeb) {
+          // ignore: avoid_dynamic_calls
+          final dynamic native = _player!.platform;
+          if (native.runtimeType.toString() == 'NativePlayer') {
+            await native.setProperty('hwdec', 'auto-safe');
+            await native.setProperty('force-seekable', 'yes');
+            await native.setProperty('untimed', 'yes');
+            await native.setProperty('demuxer-lavf-o', 'rtsp_transport=tcp');
+            await native.setProperty('network-timeout', '5');
+          }
+        }
+      } catch (e) {
+        debugPrint('Erro ao definir propriedades nativas (provavelmente web): $e');
       }
 
       _player!.stream.error.listen((error) {
