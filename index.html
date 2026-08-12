@@ -1,95 +1,365 @@
 <!DOCTYPE html>
-<html lang="pt-BR" class="dark">
+<html lang="pt-PT">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Sentinel-Hub | Download Oficial</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://unpkg.com/lucide@latest"></script>
-  <script>
-    tailwind.config = {
-      darkMode: 'class',
-      theme: {
-        extend: {
-          colors: {
-            brand: {
-              500: '#10b981',
-              600: '#059669',
-            }
-          }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VSGuard // Plataforma de Monitorização Local</title>
+    <style>
+        /* RESET & TEMA DARK/CYAN (COMO NAS IMAGENS) */
+        * { box-sizing: border-box; margin: 0; padding: 0; outline: none; }
+        
+        :root {
+            --bg-body: #050509;
+            --bg-card: #0a0e17;
+            --text-primary: #ffffff;
+            --text-secondary: #94a3b8;
+            --cyan-neon: #00f0ff;
+            --border-glow: 0 0 10px rgba(0, 240, 255, 0.4);
+            --border-color: #1f2937;
         }
-      }
-    }
-  </script>
+
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            background-color: var(--bg-body);
+            color: var(--text-secondary);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        /* NAVEGAÇÃO SUPERIOR */
+        .tab-navigation {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 30px;
+            background-color: var(--bg-card);
+            padding: 8px;
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+        }
+
+        .tab-btn {
+            background: transparent;
+            color: var(--text-secondary);
+            border: none;
+            padding: 12px 24px;
+            font-size: 15px;
+            font-weight: 600;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .tab-btn:hover { color: var(--text-primary); }
+        
+        .tab-btn.active {
+            background-color: var(--cyan-neon);
+            color: #000;
+            box-shadow: 0 0 15px rgba(0, 240, 255, 0.5);
+        }
+
+        /* CONTEÚDO DAS ABAS */
+        .tab-content {
+            display: none;
+            width: 100%;
+            max-width: 980px;
+        }
+        .tab-content.active { display: block; animation: fadeIn 0.4s ease; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+        /* CARDS PRINCIPAIS */
+        .vs-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 40px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+            margin-bottom: 25px;
+            text-align: center;
+            position: relative;
+        }
+        
+        /* Efeito de brilho nas bordas laterais (como na imagem) */
+        .vs-card::after {
+            content: ''; position: absolute; top: 15px; bottom: 15px; left: -1px; width: 3px; 
+            background: var(--cyan-neon); border-radius: 2px; box-shadow: var(--border-glow);
+        }
+
+        /* TEXTOS */
+        .card-header h1 { font-size: 2.6rem; color: var(--text-primary); letter-spacing: 1px; margin-bottom: 5px; }
+        .card-header h2 { font-size: 1rem; color: var(--cyan-neon); text-transform: uppercase; letter-spacing: 2px; font-weight: 700; margin-bottom: 25px; }
+
+        .os-header p { font-size: 1.1rem; color: var(--text-secondary); max-width: 600px; margin: 0 auto 30px auto; line-height: 1.5; }
+
+        .status-badge {
+            display: inline-block;
+            background: rgba(0, 240, 255, 0.08);
+            border: 1px solid rgba(0, 240, 255, 0.3);
+            color: var(--cyan-neon);
+            padding: 6px 16px; border-radius: 20px; font-size: 13px; font-weight: 600; margin-bottom: 30px;
+        }
+
+        /* BOTÕES DE DOWNLOAD */
+        .btn-group { display: flex; gap: 15px; justify-content: center; flex-wrap: wrap; margin-bottom: 30px; }
+        .btn-vs {
+            background-color: var(--cyan-neon); color: #000;
+            text-decoration: none; padding: 14px 28px; border-radius: 8px;
+            font-weight: 700; transition: all 0.2s; box-shadow: var(--border-glow);
+        }
+        .btn-vs:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0, 240, 255, 0.6); }
+
+        /* GRILHA DE RECURSOS */
+        .feat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 15px; text-align: left; }
+        .feat-item { background: rgba(255,255,255,0.02); border: 1px solid var(--border-color); padding: 20px; border-radius: 10px; }
+        .feat-item h4 { color: var(--text-primary); margin-bottom: 6px; }
+
+        /* ======================== FERRAMENTA OS ======================== */
+        
+        /* BARRA DE FERRAMENTAS */
+        .toolbar {
+            display: flex; gap: 10px; justify-content: center; align-items: center; flex-wrap: wrap;
+            background: #080a12; padding: 15px; border-radius: 12px; border: 1px solid var(--border-color);
+            margin-bottom: 25px;
+        }
+
+        .tool-btn {
+            background: transparent; color: var(--text-secondary);
+            border: 1px solid var(--border-color); padding: 10px; border-radius: 8px;
+            cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center;
+        }
+        .tool-btn:hover { border-color: var(--cyan-neon); color: var(--cyan-neon); }
+        .tool-btn.active-tool { background: var(--cyan-neon); color: #000; border-color: var(--cyan-neon); box-shadow: var(--border-glow); }
+        
+        /* Ícones SVG nas ferramentas (minimalistas) */
+        .tool-btn svg { width: 22px; height: 22px; fill: currentColor; }
+
+        .divider { width: 1px; height: 30px; background-color: var(--border-color); margin: 0 5px; }
+
+        .cp-wrapper { display: flex; align-items: center; gap: 8px; font-size: 14px; color: var(--text-secondary); }
+        input[type="color"] { border: 1px solid var(--border-color); width: 35px; height: 35px; border-radius: 6px; cursor: pointer; background: transparent; }
+
+        /* CANVAS ESCURO */
+        .canvas-area { border: 1px solid #333; border-radius: 10px; position: relative; margin-bottom: 25px; overflow: hidden;}
+        canvas { background: #121620; display: block; width: 100%; cursor: crosshair; }
+
+        /* RESUMO & SUBMIT */
+        .sum-bar {
+            display: flex; justify-content: space-between; background: #080a12;
+            padding: 18px 30px; border: 1px solid var(--border-color); border-radius: 12px;
+            margin-bottom: 20px; color: var(--text-secondary); text-transform: uppercase; font-size: 14px;
+        }
+        .sum-item span { color: var(--text-primary); font-size: 18px; margin-left: 8px; }
+
+        .btn-submit {
+            width: 100%; background: #10b981; color: white; border: none; padding: 18px;
+            border-radius: 8px; font-size: 16px; font-weight: 700; cursor: pointer;
+            transition: all 0.2s; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+        }
+        .btn-submit:hover { background: #059669; box-shadow: 0 6px 18px rgba(16, 185, 129, 0.5); }
+
+    </style>
 </head>
-<body class="bg-slate-950 text-slate-100 min-h-screen font-sans flex flex-col antialiased">
+<body>
 
-  <!-- HEADER -->
-  <header class="border-b border-slate-800 bg-slate-900/90 backdrop-blur sticky top-0 z-50">
-    <div class="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-      <div class="flex items-center gap-3">
-        <div class="p-2 bg-brand-500/10 text-brand-500 rounded-lg border border-brand-500/20">
-          <i data-lucide="shield-check" class="w-6 h-6"></i>
-        </div>
-        <span class="font-bold text-xl tracking-wider text-white">SENTINEL<span class="text-brand-500">-HUB</span></span>
-      </div>
+    <div class="tab-navigation">
+        <button class="tab-btn active" onclick="switchTab('tab-home', this)">INSTALAÇÃO</button>
+        <button class="tab-btn" onclick="switchTab('tab-os', this)">ORDEM DE SERVIÇO</button>
     </div>
-  </header>
 
-  <!-- CONTEÚDO PRINCIPAL -->
-  <main class="flex-1 max-w-7xl w-full mx-auto p-6 mt-10">
-    <div class="bg-gradient-to-r from-slate-900 via-slate-900 to-slate-950 border border-slate-800 rounded-3xl p-8 md:p-12 flex flex-col md:flex-row items-center justify-between gap-12">
+    <div id="tab-home" class="tab-content active">
+        <div class="vs-card">
+            <div class="card-header">
+                <h1>VSGUARD</h1>
+                <h2>Monitorização Local // Nó de Controlo</h2>
+            </div>
 
-      <!-- LADO ESQUERDO: TEXTOS E BOTÕES -->
-      <div class="space-y-6 max-w-2xl">
-        <div class="inline-flex items-center gap-2 px-3 py-1 bg-brand-500/10 border border-brand-500/30 text-brand-500 rounded-full text-xs font-semibold uppercase tracking-wider">
-          <i data-lucide="zap" class="w-3.5 h-3.5"></i> Software Nativo • 100% Local
+            <div class="status-badge">
+                Última Release: <span id="git-version">v1.0.3-stable</span>
+            </div>
+
+            <div class="os-header">
+                <p>Implemente o VSGuard na sua infraestrutura local isolada. Centralize feeds RTSP, faça gestão de hardware ESP32 e acionadores Ethernet sem dependência da nuvem.</p>
+            </div>
+
+            <div class="btn-group">
+                <a href="#" class="btn-vs">Baixar Windows (.exe)</a>
+                <a href="#" class="btn-vs">Baixar Linux (.tar.gz)</a>
+                <a href="#" class="btn-vs">Baixar Android (.apk)</a>
+            </div>
+
+            <div class="feat-grid">
+                <div class="feat-item"><h4>🔒 Isolamento Total</h4><p>Sistema opera 100% em LAN, sem comunicações externas.</p></div>
+                <div class="feat-item"><h4>⚡ Decodificação GPU</h4><p>Aceleração gráfica nativa para múltiplos streams simultâneos.</p></div>
+                <div class="feat-item"><h4>🔌 Hardware I/O</h4><p>Controlo direto de relés Ethernet (WT32) e sensores RF 433MHz.</p></div>
+            </div>
         </div>
-        <h1 class="text-4xl md:text-5xl font-black text-white leading-tight">
-          Alta Performance em Monitoramento RTSP
-        </h1>
-        <p class="text-slate-400 text-lg leading-relaxed">
-          O Sentinel-Hub unifica feeds de câmeras e automação residencial (WT32-ETH01 / RF 433MHz) em um aplicativo Desktop e Mobile. Desfrute de decodificação de vídeo via GPU com latência zero.
-        </p>
-
-        <!-- CALL TO ACTIONS (DOWNLOADS) -->
-        <div class="pt-4 flex flex-col sm:flex-row flex-wrap gap-4">
-          <a href="https://github.com/vtrkenji/sentinelhubapp/releases/latest/download/sentinel_hub_windows_x64.zip" class="px-6 py-4 bg-brand-500 hover:bg-brand-600 text-slate-950 font-bold rounded-xl shadow-lg shadow-brand-500/20 transition flex items-center justify-center gap-3 w-full sm:w-auto">
-            <i data-lucide="monitor" class="w-5 h-5"></i> Windows (.exe)
-          </a>
-          <a href="https://github.com/vtrkenji/sentinelhubapp/releases/latest/download/sentinel_hub_linux_x64.tar.gz" class="px-6 py-4 bg-slate-800 hover:bg-slate-700 text-slate-100 font-semibold rounded-xl border border-slate-700 transition flex items-center justify-center gap-3 w-full sm:w-auto">
-            <i data-lucide="terminal" class="w-5 h-5"></i> Linux (.tar.gz)
-          </a>
-          <a href="https://github.com/vtrkenji/sentinelhubapp/releases/latest/download/sentinel_hub_android.apk" class="px-6 py-4 bg-slate-800 hover:bg-slate-700 text-slate-100 font-semibold rounded-xl border border-slate-700 transition flex items-center justify-center gap-3 w-full sm:w-auto">
-            <i data-lucide="smartphone" class="w-5 h-5"></i> Android (.apk)
-          </a>
-        </div>
-      </div>
-
-      <!-- LADO DIREITO: DESTAQUES TÉCNICOS -->
-      <div class="w-full md:w-96 bg-slate-950 border border-slate-800 p-8 rounded-2xl space-y-6">
-        <h3 class="font-bold text-slate-200 border-b border-slate-800 pb-3 uppercase tracking-wider text-sm">Vantagens Nativas</h3>
-        <ul class="space-y-4 text-slate-400">
-          <li class="flex items-start gap-3">
-            <i data-lucide="cpu" class="w-5 h-5 text-brand-500 mt-0.5"></i>
-            <span>Decodificação acelerada via Hardware (MPV nativo)</span>
-          </li>
-          <li class="flex items-start gap-3">
-            <i data-lucide="wifi-off" class="w-5 h-5 text-brand-500 mt-0.5"></i>
-            <span>Funciona offline, sem necessidade de nuvem</span>
-          </li>
-          <li class="flex items-start gap-3">
-            <i data-lucide="shield" class="w-5 h-5 text-brand-500 mt-0.5"></i>
-            <span>Conexão direta IP, total privacidade dos dados</span>
-          </li>
-        </ul>
-      </div>
-
     </div>
-  </main>
 
-  <script>
-    lucide.createIcons();
-  </script>
+    <div id="tab-os" class="tab-content">
+        <div class="vs-card">
+            <div class="os-header">
+                <h2>Gerador Interativo de OS</h2>
+                <p>Desenhe a planta baixa e posicione os nós de hardware minimalistas.</p>
+            </div>
+
+            <div class="toolbar">
+                <button id="tool-rect" class="tool-btn active-tool" onclick="selectTool('rect')" title="Desenhar Cômodo">
+                    <svg viewBox="0 0 24 24"><path d="M4 4h16v16H4zm2 2v12h12V6z"/></svg>
+                </button>
+                <button id="tool-pencil" class="tool-btn" onclick="selectTool('pencil')" title="Lápis Livre">
+                    <svg viewBox="0 0 24 24"><path d="M20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.84 1.83 3.75 3.75M3 17.25V21h3.75L17.81 9.93l-3.75-3.75z"/></svg>
+                </button>
+                
+                <div class="cp-wrapper">
+                    <label for="color-picker">Cor Lápis:</label>
+                    <input type="color" id="color-picker" value="#00f0ff">
+                </div>
+
+                <div class="divider"></div>
+
+                <button id="tool-cam" class="tool-btn" onclick="selectTool('cam')" title="Adicionar Câmera">
+                    <svg viewBox="0 0 24 24"><path d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c0 .55.45 1-1 1v-3.5l4 4v-11zM10 16c-2.21 0-4-1.79-4-4s1.79-4 4-4 4 1.79 4 4-1.79 4-4 4"/></svg>
+                </button>
+                <button id="tool-esp" class="tool-btn" onclick="selectTool('esp')" title="Adicionar Módulo ESP32">
+                    <svg viewBox="0 0 24 24"><path d="M19 19v-2a1 1 0 0 0-1-1h-2v2h3M19 5h-3v2h2a1 1 0 0 1 1 1v2h1V5M5 5v2a1 1 0 0 0 1 1h2V5H5m3 14H5a1 1 0 0 1-1-1v-2h-1v3h4M12 11h-2v2h2v-2m4 0h-2v2h2v-2m-8 0h-2v2h2v-2m-3 9v2h18v-2M15 3h1v2h-1zM9 3h1v2H9z"/></svg>
+                </button>
+                <button id="tool-dvr" class="tool-btn" onclick="selectTool('dvr')" title="Adicionar DVR">
+                    <svg viewBox="0 0 24 24"><path d="M21 16H3V8h18zM5 10v4h2v-4zm4 0v4h10v-4zM22 6c1.1 0 2 .9 2 2v8c0 1.1-.9 2-2 2H2c-1.1 0-2-.9-2-2V8c0-1.1.9-2 2-2zm0 2H2v8h20zM3 3h18v2H3z"/></svg>
+                </button>
+
+                <div class="divider"></div>
+
+                <button class="tool-btn" style="border-color: #ef4444; color: #ef4444;" onclick="resetCanvas()" title="Limpar Tudo">
+                    <svg viewBox="0 0 24 24"><path d="M19 4h-3.5l-1-1h-5l-1 1H5v2h14M6 19a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V7H6z"/></svg>
+                </button>
+            </div>
+
+            <div class="canvas-area">
+                <canvas id="osCanvas" width="900" height="480"></canvas>
+            </div>
+
+            <div class="sum-bar">
+                <div class="sum-item">Nós CAM: <span id="cnt-cam">0</span></div>
+                <div class="sum-item">Nós ESP32: <span id="cnt-esp">0</span></div>
+                <div class="sum-item">Sistemas DVR: <span id="cnt-dvr">0</span></div>
+            </div>
+
+            <button class="btn-submit" onclick="submitOS()">UPLOAD ORDEM DE SERVIÇO</button>
+        </div>
+    </div>
+
+    <script>
+        function switchTab(tabId, element) {
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById(tabId).classList.add('active');
+            element.classList.add('active');
+        }
+
+        // LÓGICA CANVAS
+        const canvas = document.getElementById('osCanvas');
+        const ctx = canvas.getContext('2d');
+        let currentTool = 'rect';
+        let isDrawing = false;
+        let startX, startY;
+        let countCam=0, countEsp=0, countDvr=0;
+
+        function selectTool(tool) {
+            currentTool = tool;
+            document.querySelectorAll('.tool-btn').forEach(btn => btn.classList.remove('active-tool'));
+            document.getElementById('tool-' + tool).classList.add('active-tool');
+        }
+
+        function updateSum() {
+            document.getElementById('cnt-cam').innerText = countCam;
+            document.getElementById('cnt-esp').innerText = countEsp;
+            document.getElementById('cnt-dvr').innerText = countDvr;
+        }
+
+        function resetCanvas() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            countCam=0; countEsp=0; countDvr=0; updateSum();
+        }
+
+        // Função para desenhar os ícones minimalistas de linha no canvas (em ciano)
+        function drawIconOnCanvas(type, x, y) {
+            ctx.strokeStyle = '#00f0ff';
+            ctx.lineWidth = 1.5;
+            ctx.shadowColor = 'rgba(0, 240, 255, 0.6)'; ctx.shadowBlur = 8; // Efeito neon
+            ctx.beginPath();
+            
+            const size = 15; // Metade do tamanho do ícone
+
+            if (type === 'cam') {
+                // Desenho geométrico simples da câmera (corpo rect + triângulo lente)
+                ctx.moveTo(x - 10, y - 7); ctx.lineTo(x + 5, y - 7); ctx.lineTo(x + 5, y + 7); ctx.lineTo(x - 10, y + 7); ctx.closePath();
+                ctx.moveTo(x + 5, y - 3); ctx.lineTo(x + 12, y - 7); ctx.lineTo(x + 12, y + 7); ctx.lineTo(x + 5, y + 3);
+            } else if (type === 'esp') {
+                // Desenho minimalista de chip (quadrado central + 4 pinos)
+                ctx.rect(x - 8, y - 8, 16, 16); // Corpo
+                ctx.moveTo(x-12, y-5); ctx.lineTo(x-8, y-5); // Pinos esq
+                ctx.moveTo(x-12, y+5); ctx.lineTo(x-8, y+5);
+                ctx.moveTo(x+8, y-5); ctx.lineTo(x+12, y-5); // Pinos dir
+                ctx.moveTo(x+8, y+5); ctx.lineTo(x+12, y+5);
+                ctx.moveTo(x, y-2); ctx.arc(x, y, 2, 0, Math.PI*2); // Circuito central
+            } else if (type === 'dvr') {
+                // Desenho simplificado de discos/sistema (dois rects sobrepostos)
+                ctx.rect(x - 12, y - 6, 24, 12);
+                ctx.moveTo(x - 12, y - 2); ctx.lineTo(x + 12, y - 2);
+                ctx.moveTo(x - 12, y + 2); ctx.lineTo(x + 12, y + 2);
+                ctx.moveTo(x - 8, y); ctx.arc(x-8, y, 1, 0, Math.PI*2); // Luzes status
+                ctx.moveTo(x - 4, y); ctx.arc(x-4, y, 1, 0, Math.PI*2);
+            }
+            
+            ctx.stroke();
+            ctx.shadowBlur = 0; // Tira glow pro próximo desenho
+        }
+
+        canvas.addEventListener('mousedown', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            startX = e.clientX - rect.left; startY = e.clientY - rect.top;
+            isDrawing = true;
+
+            if (['cam', 'esp', 'dvr'].includes(currentTool)) {
+                if(currentTool === 'cam') countCam++;
+                if(currentTool === 'esp') countEsp++;
+                if(currentTool === 'dvr') countDvr++;
+                drawIconOnCanvas(currentTool, startX, startY);
+                updateSum(); isDrawing = false; // Não arrasta ícones
+            }
+        });
+
+        canvas.addEventListener('mousemove', (e) => {
+            if (!isDrawing) return;
+            const rect = canvas.getBoundingClientRect();
+            const mouseX = e.clientX - rect.left; const mouseY = e.clientY - rect.top;
+
+            if (currentTool === 'pencil') {
+                ctx.strokeStyle = document.getElementById('color-picker').value;
+                ctx.lineWidth = 1.5;
+                ctx.lineTo(mouseX, mouseY); ctx.stroke();
+            }
+        });
+
+        canvas.addEventListener('mouseup', (e) => {
+            if (!isDrawing) return;
+            const rect = canvas.getBoundingClientRect();
+            const mouseX = e.clientX - rect.left; const mouseY = e.clientY - rect.top;
+
+            if (currentTool === 'pencil') { ctx.beginPath(); }
+            if (currentTool === 'rect') {
+                ctx.strokeStyle = '#ffffff'; // Cômodos em branco (minimalista)
+                ctx.lineWidth = 1;
+                ctx.strokeRect(startX, startY, mouseX - startX, mouseY - startY);
+            }
+            isDrawing = false;
+        });
+
+        function submitOS() {
+            alert('A preparar dados da planta e lista de nós para upload...');
+        }
+    </script>
 </body>
 </html>
