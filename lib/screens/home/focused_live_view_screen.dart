@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:media_kit/media_kit.dart';
 import 'package:media_kit_video/media_kit_video.dart';
@@ -33,10 +34,16 @@ class _FocusedLiveViewScreenState extends State<FocusedLiveViewScreen> {
       configuration: getVideoControllerConfiguration(),
     );
 
-    // FIX: Evita crash da thread de renderização no Linux
-    if (_player.platform is NativePlayer) {
-      await (_player.platform as NativePlayer)
-          .setProperty('hwdec', 'auto-safe');
+    try {
+      if (!kIsWeb) {
+        // ignore: avoid_dynamic_calls
+        final dynamic native = _player.platform;
+        if (native.runtimeType.toString() == 'NativePlayer') {
+          await native.setProperty('hwdec', 'auto-safe');
+        }
+      }
+    } catch (e) {
+      debugPrint('Erro ao definir propriedades nativas (provavelmente web): $e');
     }
 
     // Conecta-se à stream principal (alta resolução)
