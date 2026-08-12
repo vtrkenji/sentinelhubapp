@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sentinel-Hub | Download Oficial</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              500: '#10b981',
+              600: '#059669',
+            }
+          }
+        }
+      }
+    }
+  </script>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen font-sans flex flex-col antialiased">
+
+  <!-- HEADER -->
+  <header class="border-b border-slate-800 bg-slate-900/90 backdrop-blur sticky top-0 z-50">
+    <div class="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <div class="p-2 bg-brand-500/10 text-brand-500 rounded-lg border border-brand-500/20">
+          <i data-lucide="shield-check" class="w-6 h-6"></i>
+        </div>
+        <span class="font-bold text-xl tracking-wider text-white">SENTINEL<span class="text-brand-500">-HUB</span></span>
+      </div>
+    </div>
+  </header>
+
+  <!-- CONTEÚDO PRINCIPAL -->
+  <main class="flex-1 max-w-7xl w-full mx-auto p-6 mt-10">
+    <div class="bg-gradient-to-r from-slate-900 via-slate-900 to-slate-950 border border-slate-800 rounded-3xl p-8 md:p-12 flex flex-col md:flex-row items-center justify-between gap-12">
+
+      <!-- LADO ESQUERDO: TEXTOS E BOTÕES -->
+      <div class="space-y-6 max-w-2xl">
+        <div class="inline-flex items-center gap-2 px-3 py-1 bg-brand-500/10 border border-brand-500/30 text-brand-500 rounded-full text-xs font-semibold uppercase tracking-wider">
+          <i data-lucide="zap" class="w-3.5 h-3.5"></i> Software Nativo • 100% Local
+        </div>
+        <h1 class="text-4xl md:text-5xl font-black text-white leading-tight">
+          Alta Performance em Monitoramento RTSP
+        </h1>
+        <p class="text-slate-400 text-lg leading-relaxed">
+          O Sentinel-Hub unifica feeds de câmeras e automação residencial (WT32-ETH01 / RF 433MHz) em um aplicativo Desktop e Mobile. Desfrute de decodificação de vídeo via GPU com latência zero.
+        </p>
+
+        <!-- CALL TO ACTIONS (DOWNLOADS) -->
+        <div class="pt-4 flex flex-col sm:flex-row flex-wrap gap-4">
+          <a href="https://github.com/vtrkenji/sentinelhubapp/releases/latest/download/sentinel_hub_windows_x64.zip" class="px-6 py-4 bg-brand-500 hover:bg-brand-600 text-slate-950 font-bold rounded-xl shadow-lg shadow-brand-500/20 transition flex items-center justify-center gap-3 w-full sm:w-auto">
+            <i data-lucide="monitor" class="w-5 h-5"></i> Windows (.exe)
+          </a>
+          <a href="https://github.com/vtrkenji/sentinelhubapp/releases/latest/download/sentinel_hub_linux_x64.tar.gz" class="px-6 py-4 bg-slate-800 hover:bg-slate-700 text-slate-100 font-semibold rounded-xl border border-slate-700 transition flex items-center justify-center gap-3 w-full sm:w-auto">
+            <i data-lucide="terminal" class="w-5 h-5"></i> Linux (.tar.gz)
+          </a>
+          <a href="https://github.com/vtrkenji/sentinelhubapp/releases/latest/download/sentinel_hub_android.apk" class="px-6 py-4 bg-slate-800 hover:bg-slate-700 text-slate-100 font-semibold rounded-xl border border-slate-700 transition flex items-center justify-center gap-3 w-full sm:w-auto">
+            <i data-lucide="smartphone" class="w-5 h-5"></i> Android (.apk)
+          </a>
+        </div>
+      </div>
+
+      <!-- LADO DIREITO: DESTAQUES TÉCNICOS -->
+      <div class="w-full md:w-96 bg-slate-950 border border-slate-800 p-8 rounded-2xl space-y-6">
+        <h3 class="font-bold text-slate-200 border-b border-slate-800 pb-3 uppercase tracking-wider text-sm">Vantagens Nativas</h3>
+        <ul class="space-y-4 text-slate-400">
+          <li class="flex items-start gap-3">
+            <i data-lucide="cpu" class="w-5 h-5 text-brand-500 mt-0.5"></i>
+            <span>Decodificação acelerada via Hardware (MPV nativo)</span>
+          </li>
+          <li class="flex items-start gap-3">
+            <i data-lucide="wifi-off" class="w-5 h-5 text-brand-500 mt-0.5"></i>
+            <span>Funciona offline, sem necessidade de nuvem</span>
+          </li>
+          <li class="flex items-start gap-3">
+            <i data-lucide="shield" class="w-5 h-5 text-brand-500 mt-0.5"></i>
+            <span>Conexão direta IP, total privacidade dos dados</span>
+          </li>
+        </ul>
+      </div>
+
+    </div>
+  </main>
+
+  <script>
+    lucide.createIcons();
+  </script>
+</body>
+</html>
