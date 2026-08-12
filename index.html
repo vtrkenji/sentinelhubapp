@@ -1,377 +1,281 @@
 <!DOCTYPE html>
-<html lang="pt-PT">
+<html lang="pt-BR" class="dark">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>VSGuard // Plataforma de Monitorização Local</title>
-    <style>
-        /* RESET & TEMA DARK/CYAN (COMO NAS IMAGENS) */
-        * { box-sizing: border-box; margin: 0; padding: 0; outline: none; }
-        
-        :root {
-            --bg-body: #050509;
-            --bg-card: #0a0e17;
-            --text-primary: #ffffff;
-            --text-secondary: #94a3b8;
-            --cyan-neon: #00f0ff;
-            --border-glow: 0 0 10px rgba(0, 240, 255, 0.4);
-            --border-color: #1f2937;
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>kTsentinel | Plataforma de Monitoramento Local</title>
+  
+  <!-- Fontes do Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+  
+  <!-- TailwindCSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            heading: ['Space Grotesk', 'sans-serif'],
+          },
+          colors: {
+            brand: {
+              400: '#34d399',
+              500: '#10b981', // Verde Esmeralda fechado
+              600: '#059669',
+              900: '#064e3b',
+            },
+            surface: {
+              bg: '#0b0f19',    // Fundo escuro
+              card: '#1e293b',  // Cards
+              border: '#334155' // Bordas sutis
+            }
+          }
         }
-
-        body {
-            font-family: system-ui, -apple-system, sans-serif;
-            background-color: var(--bg-body);
-            color: var(--text-secondary);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            min-height: 100vh;
-            padding: 20px;
-        }
-
-        /* NAVEGAÇÃO SUPERIOR */
-        .tab-navigation {
-            display: flex;
-            gap: 15px;
-            margin-bottom: 30px;
-            background-color: var(--bg-card);
-            padding: 8px;
-            border-radius: 12px;
-            border: 1px solid var(--border-color);
-        }
-
-        .tab-btn {
-            background: transparent;
-            color: var(--text-secondary);
-            border: none;
-            padding: 12px 24px;
-            font-size: 15px;
-            font-weight: 600;
-            border-radius: 8px;
-            cursor: pointer;
-            transition: all 0.2s ease;
-        }
-
-        .tab-btn:hover { color: var(--text-primary); }
-        
-        .tab-btn.active {
-            background-color: var(--cyan-neon);
-            color: #000;
-            box-shadow: 0 0 15px rgba(0, 240, 255, 0.5);
-        }
-
-        /* CONTEÚDO DAS ABAS */
-        .tab-content {
-            display: none;
-            width: 100%;
-            max-width: 980px;
-        }
-        .tab-content.active { display: block; animation: fadeIn 0.4s ease; }
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-
-        /* CARDS PRINCIPAIS */
-        .vs-card {
-            background: var(--bg-card);
-            border: 1px solid var(--border-color);
-            border-radius: 16px;
-            padding: 40px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
-            margin-bottom: 25px;
-            text-align: center;
-            position: relative;
-        }
-        
-        /* Efeito de brilho nas bordas laterais (como na imagem) */
-        .vs-card::after {
-            content: ''; position: absolute; top: 15px; bottom: 15px; left: -1px; width: 3px; 
-            background: var(--cyan-neon); border-radius: 2px; box-shadow: var(--border-glow);
-        }
-
-        /* TEXTOS */
-        .card-header h1 { font-size: 2.6rem; color: var(--text-primary); letter-spacing: 1px; margin-bottom: 5px; }
-        .card-header h2 { font-size: 1rem; color: var(--cyan-neon); text-transform: uppercase; letter-spacing: 2px; font-weight: 700; margin-bottom: 25px; }
-
-        .os-header p { font-size: 1.1rem; color: var(--text-secondary); max-width: 600px; margin: 0 auto 30px auto; line-height: 1.5; }
-
-        .status-badge {
-            display: inline-block;
-            background: rgba(0, 240, 255, 0.08);
-            border: 1px solid rgba(0, 240, 255, 0.3);
-            color: var(--cyan-neon);
-            padding: 6px 16px; border-radius: 20px; font-size: 13px; font-weight: 600; margin-bottom: 30px;
-        }
-
-        /* BOTÕES DE DOWNLOAD */
-        .btn-group { display: flex; gap: 15px; justify-content: center; flex-wrap: wrap; margin-bottom: 30px; }
-        .btn-vs {
-            background-color: var(--cyan-neon); color: #000;
-            text-decoration: none; padding: 14px 28px; border-radius: 8px;
-            font-weight: 700; transition: all 0.2s; box-shadow: var(--border-glow);
-        }
-        .btn-vs:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0, 240, 255, 0.6); }
-
-        /* GRILHA DE RECURSOS */
-        .feat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 15px; text-align: left; }
-        .feat-item { background: rgba(255,255,255,0.02); border: 1px solid var(--border-color); padding: 20px; border-radius: 10px; }
-        .feat-item h4 { color: var(--text-primary); margin-bottom: 6px; }
-
-        /* ======================== FERRAMENTA OS ======================== */
-        
-        /* BARRA DE FERRAMENTAS */
-        .toolbar {
-            display: flex; gap: 10px; justify-content: center; align-items: center; flex-wrap: wrap;
-            background: #080a12; padding: 15px; border-radius: 12px; border: 1px solid var(--border-color);
-            margin-bottom: 25px;
-        }
-
-        .tool-btn {
-            background: transparent; color: var(--text-secondary);
-            border: 1px solid var(--border-color); padding: 10px; border-radius: 8px;
-            cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center;
-        }
-        .tool-btn:hover { border-color: var(--cyan-neon); color: var(--cyan-neon); }
-        .tool-btn.active-tool { background: var(--cyan-neon); color: #000; border-color: var(--cyan-neon); box-shadow: var(--border-glow); }
-        
-        /* Ícones SVG nas ferramentas (minimalistas) */
-        .tool-btn svg { width: 22px; height: 22px; fill: currentColor; }
-
-        .divider { width: 1px; height: 30px; background-color: var(--border-color); margin: 0 5px; }
-
-        .cp-wrapper { display: flex; align-items: center; gap: 8px; font-size: 14px; color: var(--text-secondary); }
-        input[type="color"] { border: 1px solid var(--border-color); width: 35px; height: 35px; border-radius: 6px; cursor: pointer; background: transparent; }
-
-        /* CANVAS ESCURO */
-        .canvas-area { border: 1px solid #333; border-radius: 10px; position: relative; margin-bottom: 25px; overflow: hidden;}
-        canvas { background: #121620; display: block; width: 100%; cursor: crosshair; }
-
-        /* RESUMO & SUBMIT */
-        .sum-bar {
-            display: flex; justify-content: space-between; background: #080a12;
-            padding: 18px 30px; border: 1px solid var(--border-color); border-radius: 12px;
-            margin-bottom: 20px; color: var(--text-secondary); text-transform: uppercase; font-size: 14px;
-        }
-        .sum-item span { color: var(--text-primary); font-size: 18px; margin-left: 8px; }
-
-        .btn-submit {
-            width: 100%; background: #10b981; color: white; border: none; padding: 18px;
-            border-radius: 8px; font-size: 16px; font-weight: 700; cursor: pointer;
-            transition: all 0.2s; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
-        }
-        .btn-submit:hover { background: #059669; box-shadow: 0 6px 18px rgba(16, 185, 129, 0.5); }
-
-    </style>
+      }
+    }
+  </script>
 </head>
-<body>
+<body class="bg-surface-bg text-slate-100 min-h-screen font-sans flex flex-col antialiased selection:bg-brand-500/30">
 
-    <div class="tab-navigation">
-        <button class="tab-btn active" onclick="switchTab('tab-home', this)">INSTALAÇÃO</button>
-        <button class="tab-btn" onclick="switchTab('tab-os', this)">ORDEM DE SERVIÇO</button>
-    </div>
-
-    <div id="tab-home" class="tab-content active">
-        <div class="vs-card">
-            <div class="card-header">
-                <h1>VSGUARD</h1>
-                <h2>Monitorização Local // Nó de Controlo</h2>
-            </div>
-
-            <div class="status-badge">
-                Última Release: <span id="git-version">Buscando...</span>
-            </div>
-
-            <div class="os-header">
-                <p>Implemente o VSGuard na sua infraestrutura local isolada. Centralize feeds RTSP, faça gestão de hardware ESP32 e acionadores Ethernet sem dependência da nuvem.</p>
-            </div>
-
-            <div class="btn-group">
-                <a href="#" class="btn-vs">Baixar Windows (.exe)</a>
-                <a href="#" class="btn-vs">Baixar Linux (.tar.gz)</a>
-                <a href="#" class="btn-vs">Baixar Android (.apk)</a>
-            </div>
-
-            <div class="feat-grid">
-                <div class="feat-item"><h4>🔒 Isolamento Total</h4><p>Sistema opera 100% em LAN, sem comunicações externas.</p></div>
-                <div class="feat-item"><h4>⚡ Decodificação GPU</h4><p>Aceleração gráfica nativa para múltiplos streams simultâneos.</p></div>
-                <div class="feat-item"><h4>🔌 Hardware I/O</h4><p>Controlo direto de relés Ethernet (WT32) e sensores RF 433MHz.</p></div>
-            </div>
+  <!-- HEADER NAVEGAÇÃO -->
+  <header class="border-b border-surface-border bg-surface-bg/80 backdrop-blur-md sticky top-0 z-50">
+    <div class="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
+      
+      <!-- LOGO & BRANDING -->
+      <div class="flex items-center gap-3">
+        <!-- Logo Vetorial: Escudo Tech/Radar -->
+        <div class="text-brand-500">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+            <circle cx="12" cy="11" r="3"/>
+            <path d="M12 11v3"/>
+          </svg>
         </div>
+        <span class="font-heading font-bold text-2xl tracking-tight text-white">
+          <span class="text-brand-500">kT</span>sentinel
+        </span>
+      </div>
+
+      <!-- LINKS DA NAVBAR -->
+      <nav class="hidden md:flex items-center gap-6">
+        <button onclick="scrollToSection('orcamento')" class="text-sm font-medium text-slate-300 hover:text-white transition-colors">
+          Orçamentos
+        </button>
+        <button onclick="scrollToSection('downloads')" class="px-5 py-2 text-sm font-bold bg-brand-500/10 text-brand-500 hover:bg-brand-500 hover:text-surface-bg border border-brand-500/30 rounded-lg transition-all shadow-[0_0_15px_rgba(16,185,129,0.15)]">
+          Aplicativo
+        </button>
+      </nav>
+
     </div>
+  </header>
 
-    <div id="tab-os" class="tab-content">
-        <div class="vs-card">
-            <div class="os-header">
-                <h2>Gerador Interativo de OS</h2>
-                <p>Desenhe a planta baixa e posicione os nós de hardware minimalistas.</p>
-            </div>
-
-            <div class="toolbar">
-                <button id="tool-rect" class="tool-btn active-tool" onclick="selectTool('rect')" title="Desenhar Cômodo">
-                    <svg viewBox="0 0 24 24"><path d="M4 4h16v16H4zm2 2v12h12V6z"/></svg>
-                </button>
-                <button id="tool-pencil" class="tool-btn" onclick="selectTool('pencil')" title="Lápis Livre">
-                    <svg viewBox="0 0 24 24"><path d="M20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.84 1.83 3.75 3.75M3 17.25V21h3.75L17.81 9.93l-3.75-3.75z"/></svg>
-                </button>
-                
-                <div class="cp-wrapper">
-                    <label for="color-picker">Cor Lápis:</label>
-                    <input type="color" id="color-picker" value="#00f0ff">
-                </div>
-
-                <div class="divider"></div>
-
-                <button id="tool-cam" class="tool-btn" onclick="selectTool('cam')" title="Adicionar Câmera">
-                    <svg viewBox="0 0 24 24"><path d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c0 .55.45 1-1 1v-3.5l4 4v-11zM10 16c-2.21 0-4-1.79-4-4s1.79-4 4-4 4 1.79 4 4-1.79 4-4 4"/></svg>
-                </button>
-                <button id="tool-esp" class="tool-btn" onclick="selectTool('esp')" title="Adicionar Módulo ESP32">
-                    <svg viewBox="0 0 24 24"><path d="M19 19v-2a1 1 0 0 0-1-1h-2v2h3M19 5h-3v2h2a1 1 0 0 1 1 1v2h1V5M5 5v2a1 1 0 0 0 1 1h2V5H5m3 14H5a1 1 0 0 1-1-1v-2h-1v3h4M12 11h-2v2h2v-2m4 0h-2v2h2v-2m-8 0h-2v2h2v-2m-3 9v2h18v-2M15 3h1v2h-1zM9 3h1v2H9z"/></svg>
-                </button>
-                <button id="tool-dvr" class="tool-btn" onclick="selectTool('dvr')" title="Adicionar DVR">
-                    <svg viewBox="0 0 24 24"><path d="M21 16H3V8h18zM5 10v4h2v-4zm4 0v4h10v-4zM22 6c1.1 0 2 .9 2 2v8c0 1.1-.9 2-2 2H2c-1.1 0-2-.9-2-2V8c0-1.1.9-2 2-2zm0 2H2v8h20zM3 3h18v2H3z"/></svg>
-                </button>
-
-                <div class="divider"></div>
-
-                <button class="tool-btn" style="border-color: #ef4444; color: #ef4444;" onclick="resetCanvas()" title="Limpar Tudo">
-                    <svg viewBox="0 0 24 24"><path d="M19 4h-3.5l-1-1h-5l-1 1H5v2h14M6 19a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V7H6z"/></svg>
-                </button>
-            </div>
-
-            <div class="canvas-area">
-                <canvas id="osCanvas" width="900" height="480"></canvas>
-            </div>
-
-            <div class="sum-bar">
-                <div class="sum-item">Nós CAM: <span id="cnt-cam">0</span></div>
-                <div class="sum-item">Nós ESP32: <span id="cnt-esp">0</span></div>
-                <div class="sum-item">Sistemas DVR: <span id="cnt-dvr">0</span></div>
-            </div>
-
-            <button class="btn-submit" onclick="submitOS()">UPLOAD ORDEM DE SERVIÇO</button>
+  <!-- CONTEÚDO PRINCIPAL -->
+  <main class="flex-1 w-full text-left">
+    
+    <!-- HERO SECTION -->
+    <section class="max-w-7xl mx-auto px-6 py-20 lg:py-28 flex flex-col lg:flex-row items-center gap-16">
+      
+      <!-- Lado Esquerdo: Copy -->
+      <div class="flex-1 space-y-8">
+        <div class="inline-flex items-center gap-2 px-3 py-1 bg-surface-card border border-surface-border text-brand-400 rounded-full text-xs font-semibold uppercase tracking-wider">
+          <span class="relative flex h-2 w-2">
+            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-brand-400 opacity-75"></span>
+            <span class="relative inline-flex rounded-full h-2 w-2 bg-brand-500"></span>
+          </span>
+          Última Versão: <span id="git-version" class="text-slate-300 ml-1">Buscando...</span>
         </div>
+        
+        <h1 class="font-heading text-4xl lg:text-6xl font-bold text-white leading-[1.15]">
+          Segurança Local, <br/>
+          <span class="text-transparent bg-clip-text bg-gradient-to-r from-brand-400 to-brand-600">Sem Intermediários.</span>
+        </h1>
+        
+        <p class="text-slate-400 text-lg lg:text-xl leading-relaxed max-w-2xl">
+          Centralize suas câmeras RTSP e automações residenciais em uma plataforma 100% offline. Desempenho extremo, privacidade absoluta e sem custos mensais.
+        </p>
+
+        <!-- Ação Principal -->
+        <div class="pt-4 flex items-center gap-4">
+          <button onclick="scrollToSection('downloads')" class="px-8 py-4 bg-brand-500 hover:bg-brand-600 text-surface-bg font-bold rounded-xl shadow-[0_4px_20px_rgba(16,185,129,0.3)] transition-all flex items-center gap-3 text-sm md:text-base">
+            Baixar Agora
+            <i data-lucide="arrow-down" class="w-5 h-5"></i>
+          </button>
+          <a href="#diferenciais" class="px-8 py-4 bg-surface-card hover:bg-surface-border border border-surface-border text-white font-medium rounded-xl transition-all text-sm md:text-base">
+            Saiba Mais
+          </a>
+        </div>
+      </div>
+
+      <!-- Lado Direito: Ilustração/Interface Falsa -->
+      <div class="flex-1 w-full max-w-lg relative">
+        <div class="absolute inset-0 bg-brand-500/20 blur-[100px] rounded-full"></div>
+        <div class="relative bg-surface-card border border-surface-border rounded-2xl p-4 shadow-2xl overflow-hidden">
+          <div class="flex gap-2 mb-4 px-2">
+            <div class="w-3 h-3 rounded-full bg-rose-500"></div>
+            <div class="w-3 h-3 rounded-full bg-amber-500"></div>
+            <div class="w-3 h-3 rounded-full bg-brand-500"></div>
+          </div>
+          <div class="grid grid-cols-2 gap-3">
+            <div class="bg-surface-bg rounded-lg h-32 border border-surface-border/50 flex items-center justify-center text-slate-500/50">
+              <i data-lucide="video" class="w-8 h-8"></i>
+            </div>
+            <div class="bg-surface-bg rounded-lg h-32 border border-surface-border/50 flex items-center justify-center text-slate-500/50">
+              <i data-lucide="video" class="w-8 h-8"></i>
+            </div>
+            <div class="col-span-2 bg-surface-bg rounded-lg h-12 border border-surface-border/50 flex items-center px-4 justify-between">
+              <div class="flex gap-2 items-center text-slate-400 text-sm">
+                <i data-lucide="bell-ring" class="w-4 h-4 text-brand-500"></i>
+                Campainha Acionada (RF433)
+              </div>
+              <span class="text-xs text-slate-500">Agora</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SEÇÃO: DIFERENCIAIS (Cards) -->
+    <section id="diferenciais" class="border-t border-surface-border bg-surface-bg/50 py-20">
+      <div class="max-w-7xl mx-auto px-6">
+        <h2 class="font-heading text-3xl font-bold text-white mb-12">Por que escolher o kTsentinel?</h2>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          
+          <div class="bg-surface-card border border-surface-border rounded-2xl p-8 hover:border-brand-500/50 transition-colors">
+            <div class="w-12 h-12 bg-brand-500/10 text-brand-500 rounded-xl flex items-center justify-center mb-6">
+              <i data-lucide="monitor-play" class="w-6 h-6"></i>
+            </div>
+            <h3 class="font-heading font-bold text-xl text-white mb-3">CFTV Local (RTSP)</h3>
+            <p class="text-slate-400 text-sm leading-relaxed">Assista às suas câmeras IPs com latência zero e decodificação acelerada por hardware direto na sua rede.</p>
+          </div>
+
+          <div class="bg-surface-card border border-surface-border rounded-2xl p-8 hover:border-brand-500/50 transition-colors">
+            <div class="w-12 h-12 bg-brand-500/10 text-brand-500 rounded-xl flex items-center justify-center mb-6">
+              <i data-lucide="zap" class="w-6 h-6"></i>
+            </div>
+            <h3 class="font-heading font-bold text-xl text-white mb-3">Notificações Push</h3>
+            <p class="text-slate-400 text-sm leading-relaxed">Integre sensores RF 433MHz ou campainhas e receba alertas instantâneos no celular e desktop.</p>
+          </div>
+
+          <div class="bg-surface-card border border-surface-border rounded-2xl p-8 hover:border-brand-500/50 transition-colors">
+            <div class="w-12 h-12 bg-brand-500/10 text-brand-500 rounded-xl flex items-center justify-center mb-6">
+              <i data-lucide="lock" class="w-6 h-6"></i>
+            </div>
+            <h3 class="font-heading font-bold text-xl text-white mb-3">100% Privado</h3>
+            <p class="text-slate-400 text-sm leading-relaxed">Sem nuvem, sem vazamentos, sem mensalidades. Seus dados e vídeos não saem da sua casa ou empresa.</p>
+          </div>
+
+          <div class="bg-surface-card border border-surface-border rounded-2xl p-8 hover:border-brand-500/50 transition-colors">
+            <div class="w-12 h-12 bg-brand-500/10 text-brand-500 rounded-xl flex items-center justify-center mb-6">
+              <i data-lucide="layout-grid" class="w-6 h-6"></i>
+            </div>
+            <h3 class="font-heading font-bold text-xl text-white mb-3">Interface Prática</h3>
+            <p class="text-slate-400 text-sm leading-relaxed">Desenvolvido com foco no essencial. Uma interface limpa, sem menus complexos e pronta para operar.</p>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- SEÇÃO: DOWNLOADS (Nativos) -->
+    <section id="downloads" class="py-20 max-w-7xl mx-auto px-6">
+      <div class="bg-surface-card border border-surface-border rounded-3xl p-10 md:p-16 text-center lg:text-left flex flex-col lg:flex-row items-center justify-between gap-12 relative overflow-hidden">
+        
+        <!-- Background Decorativo -->
+        <div class="absolute top-0 right-0 w-64 h-64 bg-brand-500/10 blur-[80px] rounded-full pointer-events-none"></div>
+
+        <div class="max-w-xl relative z-10">
+          <h2 class="font-heading text-3xl font-bold text-white mb-4">Pronto para instalar?</h2>
+          <p class="text-slate-400 text-lg">Selecione o seu sistema operacional abaixo e tenha o controle total da sua segurança local em minutos.</p>
+        </div>
+
+        <div class="flex flex-col sm:flex-row gap-4 relative z-10 w-full lg:w-auto">
+          <!-- WIN -->
+          <a href="https://github.com/vtrkenji/sentinelhubapp/releases/latest/download/sentinel_hub_windows_x64.zip" class="flex items-center gap-4 bg-surface-bg hover:bg-surface-border border border-surface-border px-6 py-4 rounded-xl transition-all group">
+            <svg class="w-6 h-6 text-slate-300 group-hover:text-white transition-colors" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M0 3.449L9.75 2.1v9.161H0V3.449zm10.584-1.442L24 0v11.136H10.584V2.007zM0 12.197h9.75v9.141L0 19.988v-7.791zm10.584.148H24V24l-13.416-1.89v-9.765z"/>
+            </svg>
+            <div class="text-left">
+              <div class="text-[10px] text-slate-400 uppercase font-semibold">Windows</div>
+              <div class="text-sm font-bold text-white">Baixar .exe</div>
+            </div>
+          </a>
+
+          <!-- LINUX -->
+          <a href="https://github.com/vtrkenji/sentinelhubapp/releases/latest/download/sentinel_hub_linux_x64.tar.gz" class="flex items-center gap-4 bg-surface-bg hover:bg-surface-border border border-surface-border px-6 py-4 rounded-xl transition-all group">
+            <svg class="w-6 h-6 text-slate-300 group-hover:text-white transition-colors" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12.015 1C9.626 1 7.218 3.518 7.218 3.518s-1.83 2.062-2.128 4.708c-.287 2.628 1.488 4.097 1.488 4.097s-1.769.758-2.614 2.87c-.846 2.112.593 4.298 2.065 5.59 1.472 1.293 3.633 1.815 6.046 1.815 2.41 0 4.542-.515 6.002-1.787 1.46-1.27 2.92-3.412 2.1-5.541-.822-2.13-2.628-2.902-2.628-2.902s1.776-1.469 1.49-4.097c-.297-2.646-2.127-4.708-2.127-4.708S14.412 1 12.015 1zm-2.029 4.381c.883 0 1.597.712 1.597 1.596 0 .882-.714 1.595-1.597 1.595-.882 0-1.595-.713-1.595-1.595 0-.884.713-1.596 1.595-1.596zm4.075 0c.882 0 1.596.712 1.596 1.596 0 .882-.714 1.595-1.596 1.595-.884 0-1.597-.713-1.597-1.595 0-.884.713-1.596 1.597-1.596z"/>
+            </svg>
+            <div class="text-left">
+              <div class="text-[10px] text-slate-400 uppercase font-semibold">Linux</div>
+              <div class="text-sm font-bold text-white">Baixar .tar.gz</div>
+            </div>
+          </a>
+
+          <!-- ANDROID -->
+          <a href="https://github.com/vtrkenji/sentinelhubapp/releases/latest/download/sentinel_hub_android.apk" class="flex items-center gap-4 bg-surface-bg hover:bg-surface-border border border-surface-border px-6 py-4 rounded-xl transition-all group">
+            <svg class="w-6 h-6 text-slate-300 group-hover:text-white transition-colors" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M17.523 15.3414c-.5511 0-.9993-.4486-.9993-.9997s.4483-.9993.9993-.9993c.5511 0 .9993.4482.9993.9993.0003.5511-.4482.9997-.9993.9997m-11.046 0c-.5511 0-.9993-.4486-.9993-.9997s.4482-.9993.9993-.9993c.5511 0 .9993.4482.9993.9993 0 .5511-.4482.9997-.9993.9997m11.4045-6.02l1.9973-3.4592a.416.416 0 00-.1521-.5676.416.416 0 00-.5676.1521l-2.022 3.503c-1.4362-.6581-3.1653-1.0124-5.1371-1.0124-1.9712 0-3.7003.3542-5.1365 1.0124L4.8385 5.4471a.4161.4161 0 00-.5676-.1521.4157.4157 0 00-.1521.5676l1.997 3.4592C2.6889 11.1867.3432 14.6589 0 18.761h24c-.3435-4.1021-2.6892-7.5743-6.1185-9.44z"/>
+            </svg>
+            <div class="text-left">
+              <div class="text-[10px] text-slate-400 uppercase font-semibold">Android</div>
+              <div class="text-sm font-bold text-white">Baixar .apk</div>
+            </div>
+          </a>
+        </div>
+      </div>
+    </section>
+    
+    <!-- SEÇÃO ORÇAMENTOS / MODAL EXPLICAÇÃO -->
+    <section id="orcamento" class="py-20 border-t border-surface-border bg-surface-bg">
+      <div class="max-w-3xl mx-auto px-6 text-center space-y-6">
+        <h2 class="font-heading text-3xl font-bold text-white">Gerador de Orçamentos</h2>
+        <p class="text-slate-400 text-lg">Nossa ferramenta interativa de desenho de planta baixa e estimativa de custos foi movida para um portal exclusivo de parceiros e instaladores.</p>
+        <button class="px-6 py-3 bg-surface-card border border-surface-border text-white font-medium rounded-lg hover:border-brand-500/50 transition-colors">
+          Acessar Portal do Instalador
+        </button>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="border-t border-surface-border bg-surface-bg py-8">
+    <div class="max-w-7xl mx-auto px-6 text-center text-sm text-slate-500">
+      &copy; 2024 kTsentinel. Software Open-Source sem fins lucrativos.
     </div>
+  </footer>
 
-    <script>
-        // BUSA A VERSÃO LATEST DIRETO DO GITHUB
-        fetch('https://api.github.com/repos/vtrkenji/sentinelhubapp/releases/latest')
-            .then(response => response.json())
-            .then(data => {
-                if (data.tag_name) {
-                    document.getElementById('git-version').innerText = data.tag_name;
-                }
-            })
-            .catch(error => {
-                document.getElementById('git-version').innerText = 'v1.0.0';
-            });
+  <script>
+    // Inicia ícones do Lucide
+    lucide.createIcons();
 
-        function switchTab(tabId, element) {
-            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-            document.getElementById(tabId).classList.add('active');
-            element.classList.add('active');
+    // Scroll suave para as seções
+    function scrollToSection(id) {
+      const el = document.getElementById(id);
+      if(el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }
+
+    // Busca a versão Latest do GitHub
+    fetch('https://api.github.com/repos/vtrkenji/sentinelhubapp/releases/latest')
+      .then(response => response.json())
+      .then(data => {
+        if (data.tag_name) {
+          document.getElementById('git-version').innerText = data.tag_name;
+        } else {
+          document.getElementById('git-version').innerText = 'v1.0.0';
         }
-
-        // LÓGICA CANVAS
-        const canvas = document.getElementById('osCanvas');
-        const ctx = canvas.getContext('2d');
-        let currentTool = 'rect';
-        let isDrawing = false;
-        let startX, startY;
-        let countCam=0, countEsp=0, countDvr=0;
-
-        function selectTool(tool) {
-            currentTool = tool;
-            document.querySelectorAll('.tool-btn').forEach(btn => btn.classList.remove('active-tool'));
-            document.getElementById('tool-' + tool).classList.add('active-tool');
-        }
-
-        function updateSum() {
-            document.getElementById('cnt-cam').innerText = countCam;
-            document.getElementById('cnt-esp').innerText = countEsp;
-            document.getElementById('cnt-dvr').innerText = countDvr;
-        }
-
-        function resetCanvas() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            countCam=0; countEsp=0; countDvr=0; updateSum();
-        }
-
-        // Função para desenhar os ícones minimalistas de linha no canvas (em ciano)
-        function drawIconOnCanvas(type, x, y) {
-            ctx.strokeStyle = '#00f0ff';
-            ctx.lineWidth = 1.5;
-            ctx.shadowColor = 'rgba(0, 240, 255, 0.6)'; ctx.shadowBlur = 8; // Efeito neon
-            ctx.beginPath();
-            
-            const size = 15; // Metade do tamanho do ícone
-
-            if (type === 'cam') {
-                // Desenho geométrico simples da câmera (corpo rect + triângulo lente)
-                ctx.moveTo(x - 10, y - 7); ctx.lineTo(x + 5, y - 7); ctx.lineTo(x + 5, y + 7); ctx.lineTo(x - 10, y + 7); ctx.closePath();
-                ctx.moveTo(x + 5, y - 3); ctx.lineTo(x + 12, y - 7); ctx.lineTo(x + 12, y + 7); ctx.lineTo(x + 5, y + 3);
-            } else if (type === 'esp') {
-                // Desenho minimalista de chip (quadrado central + 4 pinos)
-                ctx.rect(x - 8, y - 8, 16, 16); // Corpo
-                ctx.moveTo(x-12, y-5); ctx.lineTo(x-8, y-5); // Pinos esq
-                ctx.moveTo(x-12, y+5); ctx.lineTo(x-8, y+5);
-                ctx.moveTo(x+8, y-5); ctx.lineTo(x+12, y-5); // Pinos dir
-                ctx.moveTo(x+8, y+5); ctx.lineTo(x+12, y+5);
-                ctx.moveTo(x, y-2); ctx.arc(x, y, 2, 0, Math.PI*2); // Circuito central
-            } else if (type === 'dvr') {
-                // Desenho simplificado de discos/sistema (dois rects sobrepostos)
-                ctx.rect(x - 12, y - 6, 24, 12);
-                ctx.moveTo(x - 12, y - 2); ctx.lineTo(x + 12, y - 2);
-                ctx.moveTo(x - 12, y + 2); ctx.lineTo(x + 12, y + 2);
-                ctx.moveTo(x - 8, y); ctx.arc(x-8, y, 1, 0, Math.PI*2); // Luzes status
-                ctx.moveTo(x - 4, y); ctx.arc(x-4, y, 1, 0, Math.PI*2);
-            }
-            
-            ctx.stroke();
-            ctx.shadowBlur = 0; // Tira glow pro próximo desenho
-        }
-
-        canvas.addEventListener('mousedown', (e) => {
-            const rect = canvas.getBoundingClientRect();
-            startX = e.clientX - rect.left; startY = e.clientY - rect.top;
-            isDrawing = true;
-
-            if (['cam', 'esp', 'dvr'].includes(currentTool)) {
-                if(currentTool === 'cam') countCam++;
-                if(currentTool === 'esp') countEsp++;
-                if(currentTool === 'dvr') countDvr++;
-                drawIconOnCanvas(currentTool, startX, startY);
-                updateSum(); isDrawing = false; // Não arrasta ícones
-            }
-        });
-
-        canvas.addEventListener('mousemove', (e) => {
-            if (!isDrawing) return;
-            const rect = canvas.getBoundingClientRect();
-            const mouseX = e.clientX - rect.left; const mouseY = e.clientY - rect.top;
-
-            if (currentTool === 'pencil') {
-                ctx.strokeStyle = document.getElementById('color-picker').value;
-                ctx.lineWidth = 1.5;
-                ctx.lineTo(mouseX, mouseY); ctx.stroke();
-            }
-        });
-
-        canvas.addEventListener('mouseup', (e) => {
-            if (!isDrawing) return;
-            const rect = canvas.getBoundingClientRect();
-            const mouseX = e.clientX - rect.left; const mouseY = e.clientY - rect.top;
-
-            if (currentTool === 'pencil') { ctx.beginPath(); }
-            if (currentTool === 'rect') {
-                ctx.strokeStyle = '#ffffff'; // Cômodos em branco (minimalista)
-                ctx.lineWidth = 1;
-                ctx.strokeRect(startX, startY, mouseX - startX, mouseY - startY);
-            }
-            isDrawing = false;
-        });
-
-        function submitOS() {
-            alert('A preparar dados da planta e lista de nós para upload...');
-        }
-    </script>
+      })
+      .catch(error => {
+        document.getElementById('git-version').innerText = 'Indisponível';
+      });
+  </script>
 </body>
 </html>
