@@ -1,37 +1,42 @@
-name: Deploy App/Site to GitHub Pages
+name: Build Android (APK)
 
 on:
-  push:
-    branches: [ main ]
-
-# PERMISSÕES OBRIGATÓRIAS PARA O GITHUB PAGES
-permissions:
-  contents: read
-  pages: write
-  id-token: write
-
-# CONCORRÊNCIA PARA EVITAR DEPLOYS SIMULTÂNEOS
-concurrency:
-  group: 'pages'
-  cancel-in-progress: true
+  release:
+    types: [published]
+  workflow_dispatch:
 
 jobs:
-  deploy:
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+  build:
     runs-on: ubuntu-latest
+
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+    - name: Checkout repository
+      uses: actions/checkout@v4
 
-      # ... (suas etapas de build do Flutter / Web aqui) ...
+    - name: Set up Java
+      uses: actions/setup-java@v4
+      with:
+        distribution: 'temurin'
+        java-version: '17'
 
-      - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: 'build/web' # Ou a pasta de saída do seu build web
+    - name: Set up Flutter
+      uses: subosito/flutter-action@v2
+      with:
+        flutter-version: '3.x'
+        channel: 'stable'
 
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
+    - name: Install dependencies
+      run: flutter pub get
+
+    - name: Build APK
+      run: flutter build apk --release
+
+    - name: Rename APK
+      run: mv build/app/outputs/flutter-apk/app-release.apk sentinel_hub_android.apk
+
+    - name: Upload Release Asset
+      uses: softprops/action-gh-release@v2
+      with:
+        files: sentinel_hub_android.apk
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
