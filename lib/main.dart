@@ -105,6 +105,23 @@ void onStartBackground(ServiceInstance service) async {
 // INICIALIZADOR DO FOREGROUND SERVICE
 // ============================================================================
 Future<void> inicializarServicoSegundoPlano() async {
+  // CRIAÇÃO DO CANAL DE NOTIFICAÇÃO OBRIGATÓRIO PARA O ANDROID
+  final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
+      FlutterLocalNotificationsPlugin();
+
+  const AndroidNotificationChannel channel = AndroidNotificationChannel(
+    'vsguard_os_foreground', // Tem que ser EXATAMENTE igual ao notificationChannelId abaixo
+    'VSGuard Service Channel',
+    description: 'Canal usado para manter o serviço de escuta ativo no Android.',
+    importance: Importance.low, // Low para não fazer barulho/vibrar toda hora
+  );
+
+  await flutterLocalNotificationsPlugin
+      .resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin>()
+      ?.createNotificationChannel(channel);
+
+  // AGORA SIM INICIAMOS O SERVIÇO
   final service = FlutterBackgroundService();
   
   await service.configure(
@@ -124,39 +141,40 @@ Future<void> inicializarServicoSegundoPlano() async {
 // ============================================================================
 // FUNÇÃO MAIN
 // ============================================================================
-void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
-  MediaKit.ensureInitialized();
-  await SystemChrome.setPreferredOrientations([
-    DeviceOrientation.portraitUp,
-    DeviceOrientation.portraitDown,
-  ]);
+void main() {
+  // TUDO deve estar dentro do runZonedGuarded para evitar o erro "Zone mismatch"
+  runZonedGuarded<Future<void>>(() async {
+    WidgetsFlutterBinding.ensureInitialized();
+    MediaKit.ensureInitialized();
+    await SystemChrome.setPreferredOrientations([
+      DeviceOrientation.portraitUp,
+      DeviceOrientation.portraitDown,
+    ]);
 
-  FlutterError.onError = (FlutterErrorDetails details) {
-    FlutterError.presentError(details);
-    debugPrint('FlutterError capturado: ${details.exceptionAsString()}');
-    if (details.stack != null) {
-      debugPrint(details.stack.toString());
-    }
-  };
+    FlutterError.onError = (FlutterErrorDetails details) {
+      FlutterError.presentError(details);
+      debugPrint('FlutterError capturado: ${details.exceptionAsString()}');
+      if (details.stack != null) {
+        debugPrint(details.stack.toString());
+      }
+    };
 
-  ErrorWidget.builder = (FlutterErrorDetails details) {
-    return Material(
-      color: AppConfig.backgroundColor,
-      child: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24.0),
-          child: Text(
-            'O aplicativo encontrou um erro inesperado.\nTente reiniciar.\n\n${details.exceptionAsString()}',
-            style: TextStyle(color: AppConfig.textColor, fontSize: 16),
-            textAlign: TextAlign.center,
+    ErrorWidget.builder = (FlutterErrorDetails details) {
+      return Material(
+        color: AppConfig.backgroundColor,
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: Text(
+              'O aplicativo encontrou um erro inesperado.\nTente reiniciar.\n\n${details.exceptionAsString()}',
+              style: TextStyle(color: AppConfig.textColor, fontSize: 16),
+              textAlign: TextAlign.center,
+            ),
           ),
         ),
-      ),
-    );
-  };
+      );
+    };
 
-  runZonedGuarded<Future<void>>(() async {
     runApp(const SentinelApp());
   }, (error, stackTrace) {
     debugPrint('Erro não capturado: $error');
