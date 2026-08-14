@@ -1,6 +1,8 @@
 name: Build Linux
 
 on:
+  push:
+    branches: [ "main" ]
   release:
     types: [published]
   workflow_dispatch:
@@ -39,7 +41,16 @@ jobs:
         tar -czvf ../../../../../sentinel_hub_linux_x64.tar.gz *
         cd ../../../../../
 
+    # Salva o binário do Linux na aba Actions a cada push
+    - name: Upload Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: sentinel-hub-linux
+        path: sentinel_hub_linux_x64.tar.gz
+
+    # Envia para o Release apenas se o gatilho for uma publicação oficial
     - name: Upload Release Asset
+      if: github.event_name == 'release'
       uses: softprops/action-gh-release@v2
       with:
         files: sentinel_hub_linux_x64.tar.gz
