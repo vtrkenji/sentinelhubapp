@@ -10,6 +10,7 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'config/app_config.dart';
 import 'screens/home_screen.dart';
 import 'services/settings_service.dart';
+import 'services/ntfy_native_service.dart';
 
 // Chaves Globais para navegação e mensagens
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
@@ -167,7 +168,7 @@ void main() {
             padding: const EdgeInsets.all(24.0),
             child: Text(
               'O aplicativo encontrou um erro inesperado.\nTente reiniciar.\n\n${details.exceptionAsString()}',
-              style: TextStyle(color: AppConfig.textColor, fontSize: 16),
+              style: const TextStyle(color: AppConfig.textColor, fontSize: 16),
               textAlign: TextAlign.center,
             ),
           ),
@@ -198,6 +199,14 @@ class _SentinelAppState extends State<SentinelApp> {
     super.initState();
     _startBackgroundService();
     _requestNotificationPermission();
+    // Start native websocket-based ntfy listener for in-app notifications
+    Future.microtask(() async {
+      try {
+        await NtfyNativeService.instance.start();
+      } catch (e) {
+        debugPrint('Falha ao iniciar NtfyNativeService: $e');
+      }
+    });
   }
 
   void _startBackgroundService() {
@@ -232,15 +241,13 @@ class _SentinelAppState extends State<SentinelApp> {
         canvasColor: AppConfig.backgroundColor,
         cardColor: AppConfig.cardColor,
         primaryColor: AppConfig.accentColor,
-        colorScheme: ColorScheme.dark(
+        colorScheme: const ColorScheme.dark(
           primary: AppConfig.accentColor,
           secondary: AppConfig.accentColor,
-          background: AppConfig.backgroundColor,
           surface: AppConfig.cardColor,
           error: AppConfig.alertColor,
           onPrimary: AppConfig.backgroundColor,
           onSecondary: AppConfig.backgroundColor,
-          onBackground: AppConfig.textColor,
           onSurface: AppConfig.textColor,
           onError: AppConfig.backgroundColor,
         ),
@@ -249,39 +256,39 @@ class _SentinelAppState extends State<SentinelApp> {
               displayColor: AppConfig.textColor,
             ),
         appBarTheme: AppBarTheme(
-          backgroundColor: AppConfig.cardColor.withOpacity(0.92),
+          backgroundColor: AppConfig.cardColor.withAlpha((0.92 * 255).round()),
           elevation: 0,
-          iconTheme: IconThemeData(color: AppConfig.accentColor),
-          titleTextStyle: TextStyle(
+          iconTheme: const IconThemeData(color: AppConfig.accentColor),
+          titleTextStyle: const TextStyle(
             color: AppConfig.textColor,
             fontWeight: FontWeight.w700,
             fontSize: 18,
           ),
-          actionsIconTheme: IconThemeData(color: AppConfig.accentColor),
+          actionsIconTheme: const IconThemeData(color: AppConfig.accentColor),
         ),
         inputDecorationTheme: InputDecorationTheme(
           fillColor: AppConfig.cardColor,
           filled: true,
-          hintStyle: TextStyle(color: AppConfig.mutedTextColor),
-          labelStyle: TextStyle(color: AppConfig.textColor.withOpacity(0.92)),
+          hintStyle: const TextStyle(color: AppConfig.mutedTextColor),
+          labelStyle: TextStyle(color: AppConfig.textColor.withAlpha((0.92 * 255).round())),
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide(color: AppConfig.accentColor.withOpacity(0.16)),
+            borderSide: BorderSide(color: AppConfig.accentColor.withAlpha((0.16 * 255).round())),
           ),
           enabledBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide(color: AppConfig.accentColor.withOpacity(0.16)),
+            borderSide: BorderSide(color: AppConfig.accentColor.withAlpha((0.16 * 255).round())),
           ),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide(color: AppConfig.accentColor.withOpacity(0.40)),
+            borderSide: BorderSide(color: AppConfig.accentColor.withAlpha((0.40 * 255).round())),
           ),
         ),
         cardTheme: CardThemeData(
           color: AppConfig.cardColor,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
-            side: BorderSide(color: AppConfig.accentColor.withOpacity(0.10)),
+            side: BorderSide(color: AppConfig.accentColor.withAlpha((0.10 * 255).round())),
           ),
           elevation: 2,
         ),
@@ -297,7 +304,7 @@ class _SentinelAppState extends State<SentinelApp> {
         outlinedButtonTheme: OutlinedButtonThemeData(
           style: OutlinedButton.styleFrom(
             foregroundColor: AppConfig.accentColor,
-            side: BorderSide(color: AppConfig.accentColor.withOpacity(0.30)),
+            side: BorderSide(color: AppConfig.accentColor.withAlpha((0.30 * 255).round())),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12),
             ),
@@ -311,12 +318,12 @@ class _SentinelAppState extends State<SentinelApp> {
         bottomNavigationBarTheme: BottomNavigationBarThemeData(
           backgroundColor: AppConfig.cardColor,
           selectedItemColor: AppConfig.accentColor,
-          unselectedItemColor: AppConfig.textColor.withOpacity(0.68),
-          selectedIconTheme: IconThemeData(color: AppConfig.accentColor),
-          unselectedIconTheme: IconThemeData(color: AppConfig.textColor.withOpacity(0.68)),
+          unselectedItemColor: AppConfig.textColor.withAlpha((0.68 * 255).round()),
+          selectedIconTheme: const IconThemeData(color: AppConfig.accentColor),
+          unselectedIconTheme: IconThemeData(color: AppConfig.textColor.withAlpha((0.68 * 255).round())),
           type: BottomNavigationBarType.fixed,
         ),
-        snackBarTheme: SnackBarThemeData(
+        snackBarTheme: const SnackBarThemeData(
           backgroundColor: AppConfig.cardColor,
           contentTextStyle: TextStyle(color: AppConfig.textColor),
           actionTextColor: AppConfig.accentColor,

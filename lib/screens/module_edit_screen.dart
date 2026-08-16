@@ -100,7 +100,7 @@ class _ModuleEditScreenState extends State<ModuleEditScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
             content: const Text('Informe o IP do módulo para carregar.'),
-            backgroundColor: AppConfig.accentColor.withOpacity(0.14),
+            backgroundColor: AppConfig.accentColor.withAlpha((0.14 * 255).round()),
             behavior: SnackBarBehavior.floating),
       );
       return;
@@ -121,17 +121,17 @@ class _ModuleEditScreenState extends State<ModuleEditScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-            content: const Text('Configurações carregadas do ESP32.'),
-            backgroundColor: AppConfig.accentColor.withOpacity(0.16),
-            behavior: SnackBarBehavior.floating),
+        content: const Text('Configurações carregadas do ESP32.'),
+        backgroundColor: AppConfig.accentColor.withAlpha((0.16 * 255).round()),
+        behavior: SnackBarBehavior.floating),
       );
     } else {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-            content: Text('Falha ao comunicar com o dispositivo em $ip'),
-            backgroundColor: AppConfig.alertColor.withOpacity(0.16),
-            behavior: SnackBarBehavior.floating),
+        content: Text('Falha ao comunicar com o dispositivo em $ip'),
+        backgroundColor: AppConfig.alertColor.withAlpha((0.16 * 255).round()),
+        behavior: SnackBarBehavior.floating),
       );
     }
   }
@@ -141,7 +141,7 @@ class _ModuleEditScreenState extends State<ModuleEditScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
             content: const Text('Por favor, corrija os erros no formulário.'),
-            backgroundColor: AppConfig.accentColor.withOpacity(0.14),
+            backgroundColor: AppConfig.accentColor.withAlpha((0.14 * 255).round()),
             behavior: SnackBarBehavior.floating),
       );
       return;
@@ -175,9 +175,10 @@ class _ModuleEditScreenState extends State<ModuleEditScreen> {
 
       // If the module represents an ESP32-capable device, try to send
       // the configurations to the device's /salvar endpoint before saving.
-      if (_selectedModuleType == ModuleType.genericEsp32 ||
+        if (_selectedModuleType == ModuleType.genericEsp32 ||
           _selectedModuleType == ModuleType.wt32Eth01 ||
-          _selectedModuleType == ModuleType.rfGateway) {
+          _selectedModuleType == ModuleType.rfGateway ||
+          _selectedModuleType == ModuleType.gatewayEsp32) {
         final ip = _ipController.text.trim();
         final posted = await _esp32Service.salvarConfiguracoes(
           ip: ip,
@@ -195,7 +196,7 @@ class _ModuleEditScreenState extends State<ModuleEditScreen> {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
                 content: const Text('Falha ao salvar no ESP32. Verifique a conexão.'),
-                backgroundColor: AppConfig.alertColor.withOpacity(0.16),
+                backgroundColor: AppConfig.alertColor.withAlpha((0.16 * 255).round()),
                 behavior: SnackBarBehavior.floating),
           );
           return;
@@ -211,9 +212,9 @@ class _ModuleEditScreenState extends State<ModuleEditScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-            content: const Text('Módulo salvo com sucesso!'),
-            backgroundColor: AppConfig.accentColor.withOpacity(0.16),
-            behavior: SnackBarBehavior.floating),
+        content: const Text('Módulo salvo com sucesso!'),
+        backgroundColor: AppConfig.accentColor.withAlpha((0.16 * 255).round()),
+        behavior: SnackBarBehavior.floating),
       );
       Navigator.of(context).pop(true);
     } catch (e) {
@@ -221,7 +222,7 @@ class _ModuleEditScreenState extends State<ModuleEditScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
             content: Text('Erro ao salvar módulo: $e'),
-            backgroundColor: AppConfig.alertColor.withOpacity(0.16),
+            backgroundColor: AppConfig.alertColor.withAlpha((0.16 * 255).round()),
             behavior: SnackBarBehavior.floating),
       );
     }
@@ -303,9 +304,10 @@ class _ModuleEditScreenState extends State<ModuleEditScreen> {
   }
 
   List<Widget> _buildSpecificSettingsFields() {
-    if (_selectedModuleType == ModuleType.wt32Eth01 ||
+      if (_selectedModuleType == ModuleType.wt32Eth01 ||
         _selectedModuleType == ModuleType.rfGateway ||
-        _selectedModuleType == ModuleType.genericEsp32) {
+        _selectedModuleType == ModuleType.genericEsp32 ||
+        _selectedModuleType == ModuleType.gatewayEsp32) {
       return [
         Text('Configurações Específicas',
             style: Theme.of(context).textTheme.titleLarge),

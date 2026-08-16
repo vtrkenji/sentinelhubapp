@@ -112,7 +112,7 @@ class _RecordingsScreenState extends State<RecordingsScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
+          const Text(
             'CÂMERA',
             style: TextStyle(
               color: AppConfig.accentColor,
@@ -127,7 +127,7 @@ class _RecordingsScreenState extends State<RecordingsScreen> {
               isExpanded: true,
               value: _selectedCamera,
               dropdownColor: AppConfig.cardColor,
-              style: TextStyle(color: AppConfig.textColor),
+              style: const TextStyle(color: AppConfig.textColor),
               items: _cameras.map((camera) {
                 return DropdownMenuItem(
                   value: camera,
@@ -164,7 +164,7 @@ class _RecordingsScreenState extends State<RecordingsScreen> {
           padding: const EdgeInsets.all(16.0),
           child: Text(
             _errorMessage!,
-            style: TextStyle(color: AppConfig.alertColor),
+            style: const TextStyle(color: AppConfig.alertColor),
             textAlign: TextAlign.center,
           ),
         ),
@@ -172,7 +172,7 @@ class _RecordingsScreenState extends State<RecordingsScreen> {
     }
 
     if (_recordings.isEmpty) {
-      return Center(
+      return const Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
@@ -181,7 +181,7 @@ class _RecordingsScreenState extends State<RecordingsScreen> {
               size: 64,
               color: AppConfig.mutedTextColor,
             ),
-            const SizedBox(height: 16),
+            SizedBox(height: 16),
             Text(
               'Nenhuma gravação encontrada',
               style: TextStyle(color: AppConfig.mutedTextColor),
@@ -231,7 +231,7 @@ class _RecordingsScreenState extends State<RecordingsScreen> {
           const SizedBox(height: 8),
           Text(
             'Tamanho: ${recording.formattedSize}',
-            style: TextStyle(color: AppConfig.mutedTextColor, fontSize: 12),
+            style: const TextStyle(color: AppConfig.mutedTextColor, fontSize: 12),
           ),
         ],
       ),

@@ -148,19 +148,32 @@ class _UpdateScreenState extends State<UpdateScreen> {
       } else if (Platform.isLinux) {
         try {
           final execPath = Platform.resolvedExecutable;
+          final appDir = File(execPath).parent.path;
           final scriptPath = '${dir.path}/update.sh';
+          final execName = File(execPath).uri.pathSegments.last;
           final script = '''#!/bin/bash
 sleep 2
-mv "$savePath" "$execPath"
-chmod +x "$execPath"
-"$execPath" &
+set -e
+TMPDIR="\$(mktemp -d)"
+tar -xzf "$savePath" -C "\$TMPDIR"
+# If the extraction produced a single top-level directory, move its CONTENTS, not the directory itself
+entries=("\$TMPDIR"/*)
+if [ \${#entries[@]} -eq 1 ] && [ -d "\${entries[0]}" ]; then
+  SRC="\${entries[0]}"
+else
+  SRC="\$TMPDIR"
+fi
+cp -r "\$SRC"/* "$appDir/"
+chmod +x "$appDir/$execName"
+"$appDir/$execName" &
+rm -rf "\$TMPDIR"
 rm -- "\$0"
 ''';
 
-          await File(scriptPath).writeAsString(script);
+          await File(scriptPath).writeAsString(script, flush: true);
           await Process.run('chmod', ['+x', scriptPath]);
-          // Execute script in shell and exit current app so the script can replace the binary
-          await Process.run(scriptPath, [], runInShell: true);
+          // Execute script in shell and exit current app so the script can replace the files
+          await Process.run('/bin/bash', [scriptPath], runInShell: true);
           exit(0);
         } catch (e) {
           setState(() {
@@ -170,12 +183,29 @@ rm -- "\$0"
       } else if (Platform.isWindows) {
         try {
           final execPath = Platform.resolvedExecutable;
-          final scriptPath = '${dir.path}/update.bat';
-          final script = '@echo off\r\ntimeout /t 2 /nobreak\r\nmove /y "$savePath" "$execPath"\r\nstart "" "$execPath"\r\ndel "%~f0"\r\n';
+          final appDir = File(execPath).parent.path;
+          // Use a PowerShell script to robustly handle single top-level folders
+          final psPath = '${dir.path}/update.ps1';
+          final psScript = '''Start-Sleep -s 2
+try {
+  Expand-Archive -LiteralPath "${savePath.replaceAll(r'"', r'\"')}" -DestinationPath "\$env:TEMP\\update_tmp" -Force
+  \$items = Get-ChildItem -LiteralPath "\$env:TEMP\\update_tmp" -Force
+  \$dirs = \$items | Where-Object { \$_.PSIsContainer }
+  if (\$dirs.Count -eq 1 -and \$items.Count -ge 1) {
+    \$src = Join-Path \$env:TEMP ("update_tmp\\" + \$dirs[0].Name)
+  } else {
+    \$src = Join-Path \$env:TEMP "update_tmp"
+  }
+  Copy-Item -Path (Join-Path \$src '*') -Destination "${appDir.replaceAll(r"\\", r"\\\\") }" -Recurse -Force
+  Start-Process -FilePath "${execPath.replaceAll(r"\\", r"\\\\") }" -WorkingDirectory "${appDir.replaceAll(r"\\", r"\\\\") }"
+  Remove-Item -Recurse -Force "\$env:TEMP\\update_tmp"
+} finally {
+  Remove-Item -Path \$MyInvocation.MyCommand.Definition -Force
+}
+''';
 
-          await File(scriptPath).writeAsString(script);
-          // Run the batch file in shell; it will move the new binary and start it
-          await Process.run(scriptPath, [], runInShell: true);
+          await File(psPath).writeAsString(psScript, flush: true);
+          await Process.run('powershell', ['-ExecutionPolicy', 'Bypass', '-File', psPath], runInShell: true);
           exit(0);
         } catch (e) {
           setState(() {
