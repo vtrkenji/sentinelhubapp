@@ -2,7 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:media_kit/media_kit.dart';
 import 'package:media_kit_video/media_kit_video.dart';
-import 'package:sentinel_hub/screens/settings_screen.dart';
+import 'package:sentinel_hub/screens/app_settings_screen.dart';
 
 import '../../config/app_config.dart';
 import '../../models/camera.dart';
@@ -308,7 +308,7 @@ class _CameraStreamTileState extends State<CameraStreamTile> {
                       onPressed: () {
                         Navigator.of(context).push(
                           MaterialPageRoute(
-                              builder: (context) => const SettingsScreen()),
+                              builder: (context) => const AppSettingsScreen()),
                         );
                       },
                       iconSize: 18,

@@ -1,133 +1,121 @@
-import 'dart:async';
 import 'dart:convert';
-import 'dart:io';
-
-import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
-
-import 'settings_service.dart';
+import 'package:sentinel_hub/services/settings_service.dart';
 import 'alert_history_service.dart';
-import 'app_globals.dart';
+
+import '../config/app_config.dart';
 
 class NtfyNativeService {
-  NtfyNativeService._internal();
   static final NtfyNativeService instance = NtfyNativeService._internal();
-
-  final SettingsService _settings = SettingsService();
-  final FlutterLocalNotificationsPlugin _fln = FlutterLocalNotificationsPlugin();
+  NtfyNativeService._internal();
 
   WebSocketChannel? _channel;
-  StreamSubscription? _sub;
-  Timer? _reconnectTimer;
-  bool _isConnecting = false;
-
-  Future<void> init() async {
-    // Initialize local notifications (minimal default)
-    const AndroidInitializationSettings androidSettings =
-        AndroidInitializationSettings('@mipmap/ic_launcher');
-    // Provide Linux settings as well to avoid "Linux settings must be set" errors
-    final LinuxInitializationSettings? linuxSettings =
-        Platform.isLinux ? const LinuxInitializationSettings(defaultActionName: 'Abrir') : null;
-
-    final InitializationSettings settings = InitializationSettings(
-      android: androidSettings,
-      linux: linuxSettings,
-    );
-    await _fln.initialize(settings);
-  }
+  final FlutterLocalNotificationsPlugin _localNotifications = FlutterLocalNotificationsPlugin();
 
   Future<void> start() async {
-    if (_channel != null) return;
-    await init();
-    _connect();
-  }
+    // 1. Inicialização segura para Mobile e Desktop (Linux/Windows)
+    const androidInit = AndroidInitializationSettings('@mipmap/ic_launcher');
+    const linuxInit = LinuxInitializationSettings(defaultActionName: 'Abrir');
+    
+    const initSettings = InitializationSettings(
+      android: androidInit,
+      linux: linuxInit, 
+    );
 
-  Future<void> stop() async {
-    await _sub?.cancel();
-    try {
-      _channel?.sink.close();
-    } catch (_) {}
-    _channel = null;
-  }
+    await _localNotifications.initialize(initSettings);
 
-  Future<void> _connect() async {
-    if (_isConnecting) return;
-    _isConnecting = true;
-    try {
-      final topic = await _settings.loadNtfyTopic();
-      final chosen = (topic.trim().isEmpty) ? 'sentinel_hub_vitor' : topic.trim();
-      final uri = Uri.parse('wss://ntfy.sh/$chosen/ws');
-
-      _channel = WebSocketChannel.connect(uri);
-
-      _sub = _channel!.stream.listen((event) {
-        _handleMessage(event);
-      }, onError: (e) {
-        _scheduleReconnect();
-      }, onDone: () {
-        _scheduleReconnect();
-      }, cancelOnError: true);
-    } catch (e) {
-      _scheduleReconnect();
-    } finally {
-      _isConnecting = false;
+    // 2. Load dynamic topic from SettingsService
+    final settingsService = SettingsService();
+    String topic = await settingsService.loadNtfyTopic();
+    if (topic.isEmpty) {
+      topic = 'sentinel_vitor_01';
     }
-  }
 
-  void _scheduleReconnect() {
-    if (_reconnectTimer != null && _reconnectTimer!.isActive) return;
-    _reconnectTimer = Timer(const Duration(seconds: 5), () {
-      _connect();
-    });
-  }
+    // 3. Transforma a URL HTTP em WSS (WebSocket Seguro)
+    final String wsUrl = 'wss://ntfy.sh/$topic/ws';
+    
+    debugPrint('[NtfyWS] Conectando ao WebSocket: $wsUrl');
 
-  void _handleMessage(dynamic event) {
     try {
-      // ntfy sends JSON objects; try parsing
-      final payload = (event is String) ? jsonDecode(event) : event;
-      if (payload is Map && payload['event'] == 'message') {
-        final title = payload['title'] ?? 'VSGuard Alert';
-        final body = payload['message'] ?? payload['text'] ?? 'Nova mensagem';
-        final String t = title.toString();
-        final String b = body.toString();
-        _showNotification(t, b);
+      _channel = WebSocketChannel.connect(Uri.parse(wsUrl));
 
-        // Add to in-app history
-        AlertHistoryService.instance.addAlert(
-          AlertEntry(title: t, body: b, time: DateTime.now()),
-        );
+      _channel!.stream.listen(
+        (message) {
+          try {
+            final data = jsonDecode(message);
+            
+            if (data['event'] == 'message') {
+              final String titulo = data['title'] ?? 'Alerta VSGuard OS';
+              final String corpo = data['message'] ?? 'Campainha acionada!';
 
-        // Show a lightweight snackbar if app is in foreground
-        try {
-          final ctx = navigatorKey.currentContext;
-          if (ctx != null) {
-            ScaffoldMessenger.of(ctx).showSnackBar(
-              SnackBar(content: Text('\$t: \$b'), behavior: SnackBarBehavior.floating),
-            );
+              debugPrint('[NtfyWS] Mensagem recebida: $corpo');
+              
+              // Exibe o balão nativo
+              _mostrarNotificacaoLocal(titulo, corpo);
+              
+              // Salva no histórico do app usando o objeto AlertEntry correto
+              AlertHistoryService.instance.addAlert(
+                AlertEntry(
+                  title: titulo,
+                  body: corpo,
+                  time: DateTime.now(),
+                ),
+              );
+            }
+          } catch (e) {
+            debugPrint('[NtfyWS] Erro ao decodificar JSON do WebSocket: $e');
           }
-        } catch (_) {}
-      } else if (payload is String) {
-        _showNotification('VSGuard', payload);
-      }
+        },
+        onError: (error) {
+          debugPrint('[NtfyWS] Erro na conexão WebSocket: $error');
+          _tentarReconectar();
+        },
+        onDone: () {
+          debugPrint('[NtfyWS] Conexão WebSocket fechada. Tentando reconectar...');
+          _tentarReconectar();
+        },
+      );
     } catch (e) {
-      // Fallback: show raw text
-      _showNotification('VSGuard', event.toString());
+      debugPrint('[NtfyWS] Falha crítica ao iniciar WebSocket: $e');
     }
   }
 
-  Future<void> _showNotification(String title, String body) async {
-    final id = DateTime.now().millisecondsSinceEpoch ~/ 1000;
-    const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
-      'ntfy_channel',
-      'Ntfy Notifications',
+  Future<void> _mostrarNotificacaoLocal(String titulo, String corpo) async {
+    const androidDetails = AndroidNotificationDetails(
+      'alertas_seguranca',
+      'Alertas de Intrusão',
       importance: Importance.max,
       priority: Priority.high,
       playSound: true,
+      enableVibration: true,
     );
-    const NotificationDetails details = NotificationDetails(android: androidDetails);
-    try {
-      await _fln.show(id, title, body, details);
-    } catch (_) {}
+
+    const notificationDetails = NotificationDetails(
+      android: androidDetails,
+      linux: LinuxNotificationDetails(),
+    );
+
+    // Usa um ID único baseado no tempo para o Linux não recusar por excesso rápido
+    final int notificationId = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+
+    await _localNotifications.show(
+      notificationId,
+      titulo,
+      corpo,
+      notificationDetails,
+    );
+  }
+
+  void _tentarReconectar() {
+    Future.delayed(const Duration(seconds: 5), () {
+      debugPrint('[NtfyWS] Tentando reconectar ao Ntfy...');
+      start();
+    });
+  }
+
+  void stop() {
+    _channel?.sink.close();
   }
 }

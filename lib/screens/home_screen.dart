@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
-import 'settings_screen.dart';
+import 'modules_and_cameras_screen.dart';
+import 'app_settings_screen.dart';
 import 'update/update_screen.dart';
 import '../config/app_config.dart';
 import '../models/camera.dart';
 import '../services/camera_service.dart';
 import 'home/camera_grid_panel.dart';
 import '../services/alert_history_service.dart';
-
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -23,6 +23,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   static const List<String> _pageTitles = [
     'Painel',
+    'Módulos e Câmeras',
     'Configurações',
   ];
 
@@ -82,10 +83,10 @@ class _HomeScreenState extends State<HomeScreen> {
             ElevatedButton(
               onPressed: () {
                 Navigator.of(context)
-                    .push(MaterialPageRoute(builder: (context) => const SettingsScreen()))
+                    .push(MaterialPageRoute(builder: (context) => const ModulesAndCamerasScreen()))
                     .then((_) => _reloadCameras());
               },
-              child: const Text('Abrir Configurações'),
+              child: const Text('Adicionar Câmeras'),
             ),
           ],
         ),
@@ -97,7 +98,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
   List<Widget> get _pages => [
         _buildDashboard(),
-        const SettingsScreen(),
+        const ModulesAndCamerasScreen(),
+        const AppSettingsScreen(),
       ];
 
   @override
@@ -122,7 +124,6 @@ class _HomeScreenState extends State<HomeScreen> {
         iconTheme: const IconThemeData(color: AppConfig.accentColor),
         actionsIconTheme: const IconThemeData(color: AppConfig.accentColor),
         actions: [
-          // Notification bell with badge
           AnimatedBuilder(
             animation: AlertHistoryService.instance,
             builder: (context, _) {
@@ -155,7 +156,6 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
                 tooltip: 'Notificações',
                 onPressed: () {
-                  // Open history bottom sheet
                   showModalBottomSheet(
                     context: context,
                     builder: (ctx) {
@@ -176,8 +176,8 @@ class _HomeScreenState extends State<HomeScreen> {
                             ),
                             const Divider(height: 1),
                             if (alerts.isEmpty)
-                              Padding(
-                                padding: const EdgeInsets.all(16.0),
+                              const Padding(
+                                padding: EdgeInsets.all(16.0),
                                 child: Text('Nenhum alerta recebido ainda.', style: TextStyle(color: AppConfig.mutedTextColor)),
                               )
                             else
@@ -207,7 +207,6 @@ class _HomeScreenState extends State<HomeScreen> {
               );
             },
           ),
-
           if (_selectedIndex == 0)
             IconButton(
               icon: const Icon(Icons.refresh),
@@ -236,6 +235,10 @@ class _HomeScreenState extends State<HomeScreen> {
           BottomNavigationBarItem(
             icon: Icon(Icons.dashboard),
             label: 'Painel',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.device_hub),
+            label: 'Módulos/Câmeras',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.settings),
