@@ -2,8 +2,8 @@ name: Build Linux
 
 on:
   push:
-    branches: [ "main" ] # Dispara automaticamente a cada git push na main
-  workflow_dispatch: # Permite disparar manualmente pela aba Actions do GitHub
+    branches: [ "main" ]
+  workflow_dispatch:
 
 jobs:
   build:
@@ -13,11 +13,10 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v4
 
-    # O Linux precisa de bibliotecas de desenvolvimento do GTK/Clang para compilar a interface
     - name: Install Linux dependencies
       run: |
         sudo apt-get update -y
-        sudo apt-get install -y clang cmake ninja-build pkg-config libgtk-3-dev liblzma-dev
+        sudo apt-get install -y clang cmake ninja-build pkg-config libgtk-3-dev liblzma-dev libasound2-dev
 
     - name: Set up Flutter
       uses: subosito/flutter-action@v2
@@ -31,21 +30,18 @@ jobs:
     - name: Build Linux
       run: flutter build linux --release
 
-    # Compacta a pasta gerada em um arquivo .tar.gz limpo
     - name: Compress Build
       run: |
         cd build/linux/x64/release/bundle
         tar -czvf ../../../../../sentinel_hub_linux_x64.tar.gz .
         cd ../../../../../
 
-    # Salva o artefato no GitHub Actions (como backup)
     - name: Upload Artifact
       uses: actions/upload-artifact@v4
       with:
         name: sentinel-hub-linux
         path: sentinel_hub_linux_x64.tar.gz
 
-    # Atualiza a Release "latest" automaticamente com o novo tar.gz
     - name: Automatic Latest Release
       uses: softprops/action-gh-release@v2
       with:
