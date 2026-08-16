@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
@@ -11,30 +12,32 @@ import 'config/app_config.dart';
 import 'screens/home_screen.dart';
 import 'services/settings_service.dart';
 import 'services/ntfy_native_service.dart';
+import 'services/app_globals.dart';
 
-// Chaves Globais para navegação e mensagens
-final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
-final GlobalKey<ScaffoldMessengerState> scaffoldMessengerKey =
-    GlobalKey<ScaffoldMessengerState>();
+// Global keys are provided by services/app_globals.dart
 
 // ============================================================================
 // SERVIÇO EM SEGUNDO PLANO (Nativo usando http e stream)
 // ============================================================================
 @pragma('vm:entry-point')
 void onStartBackground(ServiceInstance service) async {
-  WidgetsFlutterBinding.ensureInitialized();
+    WidgetsFlutterBinding.ensureInitialized();
 
-  // Inicializa o plugin de Notificações Locais
-  final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
+    // Inicializa o plugin de Notificações Locais
+    final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
       FlutterLocalNotificationsPlugin();
 
-  const AndroidInitializationSettings initializationSettingsAndroid =
+    const AndroidInitializationSettings initializationSettingsAndroid =
       AndroidInitializationSettings('@mipmap/ic_launcher');
+    final LinuxInitializationSettings linuxInitializationSettings =
+      const LinuxInitializationSettings(defaultActionName: 'Abrir');
 
-  const InitializationSettings initializationSettings =
-      InitializationSettings(android: initializationSettingsAndroid);
+    final InitializationSettings initializationSettings = InitializationSettings(
+    android: initializationSettingsAndroid,
+    linux: linuxInitializationSettings,
+    );
 
-  await flutterLocalNotificationsPlugin.initialize(initializationSettings);
+    await flutterLocalNotificationsPlugin.initialize(initializationSettings);
 
   final settingsService = SettingsService();
   String topicoSecreto = AppConfig.ntfyTopic;
@@ -210,24 +213,29 @@ class _SentinelAppState extends State<SentinelApp> {
   }
 
   void _startBackgroundService() {
-    Future.microtask(() async {
-      try {
-        await inicializarServicoSegundoPlano();
-      } catch (e, stackTrace) {
-        debugPrint('Falha ao iniciar serviço em segundo plano: $e\n$stackTrace');
-      }
-    });
+    if (Platform.isAndroid || Platform.isIOS) {
+      Future.microtask(() async {
+        try {
+          await inicializarServicoSegundoPlano();
+        } catch (e, stackTrace) {
+          debugPrint('Falha ao iniciar serviço em segundo plano: $e\n$stackTrace');
+        }
+      });
+    } else {
+      debugPrint('Background service ignorado (não suportado no Desktop).');
+    }
   }
 
-  void _requestNotificationPermission() async {
+    void _requestNotificationPermission() async {
+    if (!Platform.isAndroid) return;
     final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
-        FlutterLocalNotificationsPlugin();
+      FlutterLocalNotificationsPlugin();
 
     await flutterLocalNotificationsPlugin
-        .resolvePlatformSpecificImplementation<
-            AndroidFlutterLocalNotificationsPlugin>()
-        ?.requestNotificationsPermission();
-  }
+      .resolvePlatformSpecificImplementation<
+        AndroidFlutterLocalNotificationsPlugin>()
+      ?.requestNotificationsPermission();
+    }
 
   @override
   Widget build(BuildContext context) {

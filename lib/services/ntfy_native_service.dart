@@ -1,10 +1,14 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 
+import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 
 import 'settings_service.dart';
+import 'alert_history_service.dart';
+import 'app_globals.dart';
 
 class NtfyNativeService {
   NtfyNativeService._internal();
@@ -22,8 +26,13 @@ class NtfyNativeService {
     // Initialize local notifications (minimal default)
     const AndroidInitializationSettings androidSettings =
         AndroidInitializationSettings('@mipmap/ic_launcher');
-    const InitializationSettings settings = InitializationSettings(
+    // Provide Linux settings as well to avoid "Linux settings must be set" errors
+    final LinuxInitializationSettings? linuxSettings =
+        Platform.isLinux ? const LinuxInitializationSettings(defaultActionName: 'Abrir') : null;
+
+    final InitializationSettings settings = InitializationSettings(
       android: androidSettings,
+      linux: linuxSettings,
     );
     await _fln.initialize(settings);
   }
@@ -80,7 +89,24 @@ class NtfyNativeService {
       if (payload is Map && payload['event'] == 'message') {
         final title = payload['title'] ?? 'VSGuard Alert';
         final body = payload['message'] ?? payload['text'] ?? 'Nova mensagem';
-        _showNotification(title.toString(), body.toString());
+        final String t = title.toString();
+        final String b = body.toString();
+        _showNotification(t, b);
+
+        // Add to in-app history
+        AlertHistoryService.instance.addAlert(
+          AlertEntry(title: t, body: b, time: DateTime.now()),
+        );
+
+        // Show a lightweight snackbar if app is in foreground
+        try {
+          final ctx = navigatorKey.currentContext;
+          if (ctx != null) {
+            ScaffoldMessenger.of(ctx).showSnackBar(
+              SnackBar(content: Text('\$t: \$b'), behavior: SnackBarBehavior.floating),
+            );
+          }
+        } catch (_) {}
       } else if (payload is String) {
         _showNotification('VSGuard', payload);
       }

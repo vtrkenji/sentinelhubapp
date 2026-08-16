@@ -5,6 +5,8 @@ import '../config/app_config.dart';
 import '../models/camera.dart';
 import '../services/camera_service.dart';
 import 'home/camera_grid_panel.dart';
+import '../services/alert_history_service.dart';
+
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -120,6 +122,92 @@ class _HomeScreenState extends State<HomeScreen> {
         iconTheme: const IconThemeData(color: AppConfig.accentColor),
         actionsIconTheme: const IconThemeData(color: AppConfig.accentColor),
         actions: [
+          // Notification bell with badge
+          AnimatedBuilder(
+            animation: AlertHistoryService.instance,
+            builder: (context, _) {
+              final count = AlertHistoryService.instance.unreadCount;
+              return IconButton(
+                icon: Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    const Icon(Icons.notifications),
+                    if (count > 0)
+                      Positioned(
+                        right: -2,
+                        top: -2,
+                        child: Container(
+                          padding: const EdgeInsets.all(2),
+                          decoration: BoxDecoration(
+                            color: Colors.redAccent,
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          constraints: const BoxConstraints(minWidth: 18, minHeight: 18),
+                          child: Center(
+                            child: Text(
+                              count > 99 ? '99+' : count.toString(),
+                              style: const TextStyle(color: Colors.white, fontSize: 10),
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+                tooltip: 'Notificações',
+                onPressed: () {
+                  // Open history bottom sheet
+                  showModalBottomSheet(
+                    context: context,
+                    builder: (ctx) {
+                      final alerts = AlertHistoryService.instance.alerts;
+                      return SafeArea(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            ListTile(
+                              title: const Text('Histórico de Alertas'),
+                              trailing: TextButton(
+                                onPressed: () {
+                                  AlertHistoryService.instance.markAllRead();
+                                  Navigator.of(ctx).pop();
+                                },
+                                child: const Text('Marcar como lidos'),
+                              ),
+                            ),
+                            const Divider(height: 1),
+                            if (alerts.isEmpty)
+                              Padding(
+                                padding: const EdgeInsets.all(16.0),
+                                child: Text('Nenhum alerta recebido ainda.', style: TextStyle(color: AppConfig.mutedTextColor)),
+                              )
+                            else
+                              Flexible(
+                                child: ListView.builder(
+                                  shrinkWrap: true,
+                                  itemCount: alerts.length,
+                                  itemBuilder: (context, index) {
+                                    final a = alerts[index];
+                                    return ListTile(
+                                      title: Text(a.title),
+                                      subtitle: Text(a.body),
+                                      trailing: Text(
+                                        '${a.time.hour.toString().padLeft(2, '0')}:${a.time.minute.toString().padLeft(2, '0')}',
+                                        style: const TextStyle(fontSize: 12),
+                                      ),
+                                    );
+                                  },
+                                ),
+                              ),
+                          ],
+                        ),
+                      );
+                    },
+                  );
+                },
+              );
+            },
+          ),
+
           if (_selectedIndex == 0)
             IconButton(
               icon: const Icon(Icons.refresh),
