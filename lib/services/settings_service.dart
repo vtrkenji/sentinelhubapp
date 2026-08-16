@@ -5,6 +5,10 @@ class SettingsService {
   static const String esp32SsidKey = 'esp32_ssid';
   static const String esp32PasswordKey = 'esp32_password';
   static const String esp32TopicKey = 'esp32_topic';
+  static const String esp32DuckDomKey = 'esp32_duckdom';
+  static const String esp32DuckTokKey = 'esp32_ducktok';
+  static const String esp32Camp1Key = 'esp32_camp1';
+  static const String esp32Camp2Key = 'esp32_camp2';
   static const String webhookEnabledKey = 'webhook_enabled';
   static const String webhookPortKey = 'webhook_port';
 
@@ -48,7 +52,45 @@ class SettingsService {
     return prefs.getString(esp32TopicKey) ?? '';
   }
 
-  Future<void> saveWebhookEnabled(bool enabled) async {
+  Future<void> saveEsp32DuckDom(String duckdom) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(esp32DuckDomKey, duckdom);
+  }
+
+  Future<String> loadEsp32DuckDom() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(esp32DuckDomKey) ?? '';
+  }
+
+  Future<void> saveEsp32DuckTok(String ducktok) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(esp32DuckTokKey, ducktok);
+  }
+
+  Future<String> loadEsp32DuckTok() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(esp32DuckTokKey) ?? '';
+  }
+
+  Future<void> saveEsp32Camp1(String camp1) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(esp32Camp1Key, camp1);
+  }
+
+  Future<String> loadEsp32Camp1() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(esp32Camp1Key) ?? '130805';
+  }
+
+  Future<void> saveEsp32Camp2(String camp2) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(esp32Camp2Key, camp2);
+  }
+
+  Future<String> loadEsp32Camp2() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(esp32Camp2Key) ?? '4827093';
+  }
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(webhookEnabledKey, enabled);
   }
