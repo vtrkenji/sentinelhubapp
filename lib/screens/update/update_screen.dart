@@ -132,38 +132,68 @@ class _UpdateScreenState extends State<UpdateScreen> {
         _downloadStatusText = 'Download concluído! Iniciando instalação...';
       });
 
-      // On Linux, ensure the file is executable when appropriate
-      if (Platform.isLinux) {
-        try {
-          await Process.run('chmod', ['+x', savePath]);
-        } catch (e) {
-          // ignore, we'll still try to open
+      // Handle platform-specific installation / self-update
+      if (Platform.isAndroid) {
+        // Android: open APK to trigger system installer
+        final result = await OpenFilex.open(savePath);
+        if (result.type != ResultType.done) {
+          setState(() {
+            _downloadStatusText = 'Erro ao abrir o arquivo: ${result.message}';
+          });
+        } else {
+          setState(() {
+            _downloadStatusText = 'Instalador aberto com sucesso.';
+          });
         }
-      }
+      } else if (Platform.isLinux) {
+        try {
+          final execPath = Platform.resolvedExecutable;
+          final scriptPath = '${dir.path}/update.sh';
+          final script = '''#!/bin/bash
+sleep 2
+mv "$savePath" "$execPath"
+chmod +x "$execPath"
+"$execPath" &
+rm -- "\$0"
+''';
 
-      // Instala ou abre o arquivo usando open_filex
-      final result = await OpenFilex.open(savePath);
+          await File(scriptPath).writeAsString(script);
+          await Process.run('chmod', ['+x', scriptPath]);
+          // Execute script in shell and exit current app so the script can replace the binary
+          await Process.run(scriptPath, [], runInShell: true);
+          exit(0);
+        } catch (e) {
+          setState(() {
+            _downloadStatusText = 'Erro ao aplicar atualização: $e';
+          });
+        }
+      } else if (Platform.isWindows) {
+        try {
+          final execPath = Platform.resolvedExecutable;
+          final scriptPath = '${dir.path}/update.bat';
+          final script = '@echo off\r\ntimeout /t 2 /nobreak\r\nmove /y "$savePath" "$execPath"\r\nstart "" "$execPath"\r\ndel "%~f0"\r\n';
 
-      if (result.type != ResultType.done) {
-        setState(() {
-          _downloadStatusText = 'Erro ao abrir o arquivo: ${result.message}';
-        });
+          await File(scriptPath).writeAsString(script);
+          // Run the batch file in shell; it will move the new binary and start it
+          await Process.run(scriptPath, [], runInShell: true);
+          exit(0);
+        } catch (e) {
+          setState(() {
+            _downloadStatusText = 'Erro ao aplicar atualização (Windows): $e';
+          });
+        }
       } else {
-        setState(() {
-          _downloadStatusText = 'Instalador aberto com sucesso.';
-        });
-      }
-
-      // Limpeza: no Linux removemos o arquivo temporário após alguns segundos
-      if (Platform.isLinux) {
-        Future.delayed(const Duration(seconds: 10), () async {
-          try {
-            final f = File(savePath);
-            if (await f.exists()) {
-              await f.delete();
-            }
-          } catch (_) {}
-        });
+        // Fallback: try to open with system handler
+        final result = await OpenFilex.open(savePath);
+        if (result.type != ResultType.done) {
+          setState(() {
+            _downloadStatusText = 'Erro ao abrir o arquivo: ${result.message}';
+          });
+        } else {
+          setState(() {
+            _downloadStatusText = 'Arquivo aberto com sucesso.';
+          });
+        }
       }
 
     } catch (e) {
