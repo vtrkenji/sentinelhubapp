@@ -30,6 +30,9 @@ dependencies:
   flutter_local_notifications: ^17.2.4
   universal_platform: ^1.1.0
   package_info_plus: ^10.2.1
+  open_filex: ^4.7.0
+  path_provider: ^2.1.6
+  dio: ^5.11.0
 
 dev_dependencies:
   flutter_test:

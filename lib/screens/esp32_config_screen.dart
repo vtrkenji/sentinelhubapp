@@ -77,6 +77,15 @@ class _Esp32ConfigBodyState extends State<Esp32ConfigBody> {
       _camp1Controller.text = camp1.isEmpty ? '130805' : camp1;
       _camp2Controller.text = camp2.isEmpty ? '4827093' : camp2;
     });
+
+    // Tenta carregar automaticamente o status/config do ESP32 ao abrir a tela
+    // caso haja um IP configurado.
+    if (_ipController.text.trim().isNotEmpty) {
+      // Aguarda um próximo frame para evitar chamadas durante a construção
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _testarConexao();
+      });
+    }
   }
 
   Future<void> _testarConexao() async {
