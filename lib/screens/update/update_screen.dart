@@ -1,11 +1,12 @@
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:flutter/foundation.dart';
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:open_filex/open_filex.dart';
 import 'package:package_info_plus/package_info_plus.dart';
-import 'package:url_launcher/url_launcher.dart';
+import 'package:path_provider/path_provider.dart';
 
 import '../../config/app_config.dart';
 
@@ -23,7 +24,9 @@ class _UpdateScreenState extends State<UpdateScreen> {
   String _latestVersion = '';
   String _releaseNotes = '';
   String _downloadUrl = '';
-  String _githubUrl = 'https://github.com/vtrkenji/sentinelhubapp/releases/latest';
+  bool _isDownloading = false;
+  double _downloadProgress = 0.0;
+  String _downloadStatusText = '';
 
   @override
   void initState() {
@@ -50,18 +53,27 @@ class _UpdateScreenState extends State<UpdateScreen> {
         final data = json.decode(response.body);
         _latestVersion = data['tag_name'] ?? '';
         _releaseNotes = data['body'] ?? '';
-        _githubUrl = data['html_url'] ?? _githubUrl;
 
         if (data['assets'] != null) {
           final List assets = data['assets'];
+          // Prefer APK on Android; on Linux accept several common package types
           for (var asset in assets) {
-            final name = asset['name'].toString().toLowerCase();
-            if (Platform.isWindows && name.endsWith('.zip')) {
+            final name = asset['name'].toString();
+            final lname = name.toLowerCase();
+            if (Platform.isAndroid && lname.endsWith('.apk')) {
               _downloadUrl = asset['browser_download_url'];
-            } else if (Platform.isLinux && name.endsWith('.tar.gz')) {
-              _downloadUrl = asset['browser_download_url'];
-            } else if (Platform.isAndroid && name.endsWith('.apk')) {
-              _downloadUrl = asset['browser_download_url'];
+              break;
+            }
+            if (Platform.isLinux) {
+              // Common Linux release asset patterns
+              if (lname.endsWith('.appimage') || lname.endsWith('.deb') || lname.endsWith('.tar.gz') || lname.endsWith('.zip') || lname.endsWith('.run')) {
+                _downloadUrl = asset['browser_download_url'];
+                break;
+              }
+              // Fallback: any asset without extension (possible executable)
+              if (!lname.contains('.') && _downloadUrl.isEmpty) {
+                _downloadUrl = asset['browser_download_url'];
+              }
             }
           }
         }
@@ -83,11 +95,89 @@ class _UpdateScreenState extends State<UpdateScreen> {
     }
   }
 
-  Future<void> _launchDownload() async {
-    final url = _downloadUrl.isNotEmpty ? _downloadUrl : _githubUrl;
-    final uri = Uri.parse(url);
-    if (await canLaunchUrl(uri)) {
-      await launchUrl(uri, mode: LaunchMode.externalApplication);
+  Future<void> _startDownloadAndInstall() async {
+    if (_downloadUrl.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('URL de download não encontrada para este sistema.')),
+      );
+      return;
+    }
+
+    setState(() {
+      _isDownloading = true;
+      _downloadProgress = 0.0;
+      _downloadStatusText = 'Preparando download...';
+    });
+
+    try {
+      final dir = await getTemporaryDirectory();
+      final fileName = _downloadUrl.split('/').last;
+      final savePath = '${dir.path}/$fileName';
+
+      final dio = Dio();
+      await dio.download(
+        _downloadUrl,
+        savePath,
+        onReceiveProgress: (received, total) {
+          if (total != -1) {
+            setState(() {
+              _downloadProgress = received / total;
+              _downloadStatusText = 'Baixando: ${(received / 1024 / 1024).toStringAsFixed(1)} MB / ${(total / 1024 / 1024).toStringAsFixed(1)} MB';
+            });
+          }
+        },
+      );
+
+      setState(() {
+        _downloadStatusText = 'Download concluído! Iniciando instalação...';
+      });
+
+      // On Linux, ensure the file is executable when appropriate
+      if (Platform.isLinux) {
+        try {
+          await Process.run('chmod', ['+x', savePath]);
+        } catch (e) {
+          // ignore, we'll still try to open
+        }
+      }
+
+      // Instala ou abre o arquivo usando open_filex
+      final result = await OpenFilex.open(savePath);
+
+      if (result.type != ResultType.done) {
+        setState(() {
+          _downloadStatusText = 'Erro ao abrir o arquivo: ${result.message}';
+        });
+      } else {
+        setState(() {
+          _downloadStatusText = 'Instalador aberto com sucesso.';
+        });
+      }
+
+      // Limpeza: no Linux removemos o arquivo temporário após alguns segundos
+      if (Platform.isLinux) {
+        Future.delayed(const Duration(seconds: 10), () async {
+          try {
+            final f = File(savePath);
+            if (await f.exists()) {
+              await f.delete();
+            }
+          } catch (_) {}
+        });
+      }
+
+    } catch (e) {
+      setState(() {
+        _downloadStatusText = 'Erro durante o download: $e';
+      });
+    } finally {
+      if (mounted) {
+        // Delay para o usuário ler a mensagem de sucesso antes de voltar o botão
+        await Future.delayed(const Duration(seconds: 3));
+        setState(() {
+          _isDownloading = false;
+        });
+      }
     }
   }
 
@@ -110,7 +200,7 @@ class _UpdateScreenState extends State<UpdateScreen> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(
+                  const Icon(
                     Icons.system_update_alt,
                     size: 64,
                     color: AppConfig.accentColor,
@@ -121,7 +211,7 @@ class _UpdateScreenState extends State<UpdateScreen> {
                     const SizedBox(height: 16),
                     const Text('Buscando atualizações no servidor...', style: TextStyle(fontSize: 16)),
                   ] else if (_hasUpdate) ...[
-                    Text(
+                    const Text(
                       'Nova versão disponível!',
                       style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppConfig.accentColor),
                     ),
@@ -135,7 +225,7 @@ class _UpdateScreenState extends State<UpdateScreen> {
                         decoration: BoxDecoration(
                           color: Colors.black26,
                           borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: AppConfig.accentColor.withOpacity(0.3)),
+                            border: Border.all(color: AppConfig.accentColor.withAlpha((0.3 * 255).round())),
                         ),
                         height: 120,
                         width: double.infinity,
@@ -145,16 +235,43 @@ class _UpdateScreenState extends State<UpdateScreen> {
                       ),
                       const SizedBox(height: 24),
                     ],
-                    ElevatedButton.icon(
-                      onPressed: _launchDownload,
-                      icon: const Icon(Icons.download),
-                      label: const Text('Baixar Atualização'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppConfig.accentColor,
-                        foregroundColor: Colors.black,
-                        padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+                    if (_isDownloading) ...[
+                      Column(
+                        children: [
+                          LinearProgressIndicator(
+                            value: _downloadProgress,
+                            backgroundColor: Colors.black26,
+                            color: AppConfig.accentColor,
+                            minHeight: 12,
+                          ),
+                          const SizedBox(height: 12),
+                          Text(
+                            _downloadStatusText,
+                            style: const TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                          const SizedBox(height: 12),
+                          Text(
+                            '${(_downloadProgress * 100).toStringAsFixed(0)}%',
+                              style: const TextStyle(
+                                fontSize: 24,
+                                fontWeight: FontWeight.bold,
+                                color: AppConfig.accentColor,
+                              ),
+                          ),
+                        ],
+                      )
+                    ] else ...[
+                      ElevatedButton.icon(
+                        onPressed: _startDownloadAndInstall,
+                        icon: const Icon(Icons.download),
+                        label: const Text('Baixar e Instalar'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppConfig.accentColor,
+                          foregroundColor: Colors.black,
+                          padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+                        ),
                       ),
-                    ),
+                    ]
                   ] else ...[
                     const Text(
                       'Seu sistema está atualizado!',
