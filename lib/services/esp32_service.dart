@@ -4,23 +4,12 @@ import 'package:http/http.dart' as http;
 
 class Esp32Service {
   /// Verifica o status de um dispositivo ESP32 enviando uma requisição GET.
-  /// Retorna `true` se o dispositivo responder com status 200, `false` caso contrário.
-  Future<bool> checkStatus(String ip) async {
+  /// Retorna o JSON decodificado contendo o status e os valores atuais.
+  Future<Map<String, dynamic>> checkStatus(String ipAddress) async {
     try {
       final response = await http
-          .get(Uri.parse('http://$ip/status'))
-          .timeout(const Duration(seconds: 3));
-      return response.statusCode == 200;
-    } catch (_) {
-      return false;
-    }
-  }
-
-  Future<Map<String, dynamic>> getStatusJson(String ip) async {
-    try {
-      final response = await http
-          .get(Uri.parse('http://$ip/status'))
-          .timeout(const Duration(seconds: 3));
+          .get(Uri.parse('http://$ipAddress/status'))
+          .timeout(const Duration(seconds: 4));
       if (response.statusCode == 200) {
         return jsonDecode(response.body) as Map<String, dynamic>;
       }
@@ -28,39 +17,31 @@ class Esp32Service {
     return <String, dynamic>{};
   }
 
-  Future<Map<String, dynamic>> getConfig(String ip) async {
+  /// Envia as configurações para o ESP32 usando POST (form-urlencoded).
+  Future<bool> salvarConfiguracoes({
+    required String ip,
+    required String ssid,
+    required String pass,
+    required String ntfy,
+    required String duckdom,
+    required String ducktok,
+    required String camp1,
+    required String camp2,
+  }) async {
     try {
-      final response = await http
-          .get(Uri.parse('http://$ip/config'))
-          .timeout(const Duration(seconds: 3));
-      if (response.statusCode == 200) {
-        return jsonDecode(response.body) as Map<String, dynamic>;
-      }
-    } catch (_) {}
-    return <String, dynamic>{};
-  }
-
-  Future<bool> updateConfig(
-    String ip,
-    String ssid,
-    String password,
-    String topic,
-  ) async {
-    try {
-      final body = jsonEncode(
-        <String, String>{
+      final response = await http.post(
+        Uri.parse('http://$ip/salvar'),
+        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+        body: {
           'ssid': ssid,
-          'password': password,
-          'topic': topic,
+          'pass': pass,
+          'ntfy': ntfy,
+          'duckdom': duckdom,
+          'ducktok': ducktok,
+          'camp1': camp1,
+          'camp2': camp2,
         },
-      );
-      final response = await http
-          .post(
-            Uri.parse('http://$ip/updateConfig'),
-            headers: {'Content-Type': 'application/json'},
-            body: body,
-          )
-          .timeout(const Duration(seconds: 5));
+      ).timeout(const Duration(seconds: 5));
 
       return response.statusCode == 200;
     } catch (_) {

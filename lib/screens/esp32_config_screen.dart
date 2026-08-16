@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../services/esp32_service.dart';
 import '../services/settings_service.dart';
+import '../config/app_config.dart';
 
 class Esp32ConfigScreen extends StatelessWidget {
   const Esp32ConfigScreen({super.key});
@@ -30,11 +31,12 @@ class _Esp32ConfigBodyState extends State<Esp32ConfigBody> {
   final TextEditingController _ssidController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   final TextEditingController _topicController = TextEditingController();
+  final TextEditingController _duckDomController = TextEditingController();
+  final TextEditingController _duckTokController = TextEditingController();
+  final TextEditingController _camp1Controller = TextEditingController();
+  final TextEditingController _camp2Controller = TextEditingController();
 
   bool _isLoading = false;
-  String _statusMessage = '';
-  bool _connected = false;
-  String _deviceIp = '';
 
   @override
   void initState() {
@@ -48,108 +50,107 @@ class _Esp32ConfigBodyState extends State<Esp32ConfigBody> {
     _ssidController.dispose();
     _passwordController.dispose();
     _topicController.dispose();
+    _duckDomController.dispose();
+    _duckTokController.dispose();
+    _camp1Controller.dispose();
+    _camp2Controller.dispose();
     super.dispose();
   }
 
   Future<void> _loadDefaults() async {
-    final savedIp = await _settingsService.loadEsp32Ip();
-    final savedSsid = await _settingsService.loadEsp32Ssid();
-    final savedPassword = await _settingsService.loadEsp32Password();
-    final savedTopic = await _settingsService.loadEsp32Topic();
+    final ip = await _settingsService.loadEsp32Ip();
+    final ssid = await _settingsService.loadEsp32Ssid();
+    final password = await _settingsService.loadEsp32Password();
+    final topic = await _settingsService.loadEsp32Topic();
+    final duckdom = await _settingsService.loadEsp32DuckDom();
+    final ducktok = await _settingsService.loadEsp32DuckTok();
+    final camp1 = await _settingsService.loadEsp32Camp1();
+    final camp2 = await _settingsService.loadEsp32Camp2();
 
     setState(() {
-      _ipController.text = savedIp;
-      _ssidController.text = savedSsid;
-      _passwordController.text = savedPassword;
-      _topicController.text = savedTopic;
+      _ipController.text = ip.isEmpty ? '192.168.4.1' : ip;
+      _ssidController.text = ssid.isEmpty ? 'vitorlandia2g' : ssid;
+      _passwordController.text = password;
+      _topicController.text = topic;
+      _duckDomController.text = duckdom;
+      _duckTokController.text = ducktok;
+      _camp1Controller.text = camp1.isEmpty ? '130805' : camp1;
+      _camp2Controller.text = camp2.isEmpty ? '4827093' : camp2;
     });
-
-    await _refreshStatus();
   }
 
-  Future<void> _refreshStatus() async {
+  Future<void> _testarConexao() async {
     final ip = _ipController.text.trim();
     if (ip.isEmpty) {
-      _showMessage('Informe o IP do ESP32 para verificar o estado.');
+      _showMessage('Informe o IP do ESP32 para testar a conexão.');
       return;
     }
 
     setState(() {
       _isLoading = true;
-      _statusMessage = 'Verificando...';
     });
 
-    final status = await _esp32Service.getStatusJson(ip);
+    final status = await _esp32Service.checkStatus(ip);
+
     setState(() {
       _isLoading = false;
-      _connected = status['connected'] == true;
-      _deviceIp = status['ip']?.toString() ?? '';
-      _statusMessage = status['message']?.toString() ??
-          (_connected ? 'ESP32 disponível' : 'Dispositivo inacessível');
-      _ssidController.text = status['ssid']?.toString() ?? _ssidController.text;
-      _topicController.text = status['topic']?.toString() ?? _topicController.text;
     });
-  }
 
-  Future<void> _loadConfig() async {
-    final ip = _ipController.text.trim();
-    if (ip.isEmpty) {
-      _showMessage('Informe o IP do ESP32 para carregar a configuração.');
-      return;
+    if (status.isNotEmpty) {
+      // Atualiza os campos com os dados que vieram do ESP32
+      setState(() {
+        if (status.containsKey('camp1')) _camp1Controller.text = status['camp1'].toString();
+        if (status.containsKey('camp2')) _camp2Controller.text = status['camp2'].toString();
+        if (status.containsKey('ntfy')) _topicController.text = status['ntfy'].toString();
+        if (status.containsKey('duckdom')) _duckDomController.text = status['duckdom'].toString();
+      });
+      _showMessage('✅ Conectado! Configurações atuais carregadas.', isError: false);
+    } else {
+      _showMessage('❌ Falha na comunicação com o ESP32 ($ip).', isError: true);
     }
-
-    setState(() {
-      _isLoading = true;
-      _statusMessage = 'Carregando configuração...';
-    });
-
-    final config = await _esp32Service.getConfig(ip);
-    setState(() {
-      _isLoading = false;
-      if (config.isNotEmpty) {
-        _ssidController.text = config['ssid']?.toString() ?? '';
-        _topicController.text = config['topic']?.toString() ?? '';
-        _passwordController.text = '';
-        _statusMessage = 'Configuração carregada com sucesso.';
-      } else {
-        _statusMessage = 'Não foi possível obter a configuração do ESP32.';
-      }
-    });
   }
 
-  Future<void> _saveConfig() async {
+  Future<void> _salvarConfig() async {
     if (!_formKey.currentState!.validate()) {
-      _showMessage('Corrija os campos obrigatórios antes de salvar.');
+      _showMessage('Corrija os campos obrigatórios antes de salvar.', isError: true);
       return;
     }
 
     final ip = _ipController.text.trim();
     if (ip.isEmpty) {
-      _showMessage('Informe o IP do ESP32 antes de salvar.');
+      _showMessage('Informe o IP do ESP32 antes de salvar.', isError: true);
       return;
     }
 
     setState(() {
       _isLoading = true;
-      _statusMessage = 'Enviando credenciais para o ESP32...';
     });
 
-    final success = await _esp32Service.updateConfig(
-      ip,
-      _ssidController.text.trim(),
-      _passwordController.text,
-      _topicController.text.trim(),
+    final success = await _esp32Service.salvarConfiguracoes(
+      ip: ip,
+      ssid: _ssidController.text.trim(),
+      pass: _passwordController.text,
+      ntfy: _topicController.text.trim(),
+      duckdom: _duckDomController.text.trim(),
+      ducktok: _duckTokController.text.trim(),
+      camp1: _camp1Controller.text.trim(),
+      camp2: _camp2Controller.text.trim(),
     );
 
     if (success) {
+      // Salva localmente no app
       await _settingsService.saveEsp32Ip(ip);
       await _settingsService.saveEsp32Ssid(_ssidController.text.trim());
       await _settingsService.saveEsp32Password(_passwordController.text);
       await _settingsService.saveEsp32Topic(_topicController.text.trim());
-      _showMessage('Configurações enviadas. O ESP32 deve se reconectar em alguns segundos.');
-      await _refreshStatus();
+      await _settingsService.saveEsp32DuckDom(_duckDomController.text.trim());
+      await _settingsService.saveEsp32DuckTok(_duckTokController.text.trim());
+      await _settingsService.saveEsp32Camp1(_camp1Controller.text.trim());
+      await _settingsService.saveEsp32Camp2(_camp2Controller.text.trim());
+
+      _showMessage('✅ Configurações salvas! O ESP32 será reiniciado.', isError: false);
     } else {
-      _showMessage('Falha ao enviar as configurações. Verifique a conexão e tente novamente.');
+      _showMessage('❌ Falha ao salvar no ESP32. Verifique a conexão.', isError: true);
     }
 
     setState(() {
@@ -157,142 +158,163 @@ class _Esp32ConfigBodyState extends State<Esp32ConfigBody> {
     });
   }
 
-  void _showMessage(String message) {
+  void _showMessage(String message, {bool isError = false}) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message)),
+      SnackBar(
+        content: Text(message),
+        backgroundColor: isError ? Colors.red.shade800 : Colors.green.shade700,
+        behavior: SnackBarBehavior.floating,
+      ),
     );
-    setState(() {
-      _statusMessage = message;
-    });
   }
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(16.0),
-      child: SingleChildScrollView(
+    return SingleChildScrollView(
+      child: Form(
+        key: _formKey,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text(
-              'IP do ESP32',
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
-            const SizedBox(height: 8),
-            TextFormField(
-              controller: _ipController,
-              decoration: const InputDecoration(
-                labelText: 'IP do ESP32',
-                hintText: 'Ex: 192.168.4.1 ou IP do modo estação',
-              ),
-              keyboardType: TextInputType.url,
-            ),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: _saveConfig,
-                    child: const Text('Salvar IP localmente'),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: _refreshStatus,
-                    child: const Text('Verificar Status'),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 18),
             Card(
+              color: AppConfig.cardColor,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               child: Padding(
                 padding: const EdgeInsets.all(16.0),
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      'Status do ESP32',
-                      style: TextStyle(fontWeight: FontWeight.bold),
+                    const Text('🌐 Conexão com o Dispositivo', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                    const SizedBox(height: 12),
+                    TextFormField(
+                      controller: _ipController,
+                      decoration: const InputDecoration(
+                        labelText: 'Endereço IP do ESP32',
+                        hintText: '192.168.4.1 (Modo AP) ou IP Local',
+                        prefixIcon: Icon(Icons.router),
+                        border: OutlineInputBorder(),
+                      ),
+                      keyboardType: TextInputType.url,
                     ),
                     const SizedBox(height: 12),
-                    Text('Conectado: ${_connected ? 'Sim' : 'Não'}'),
-                    const SizedBox(height: 4),
-                    Text('IP respondente: ${_deviceIp.isEmpty ? '---' : _deviceIp}'),
-                    const SizedBox(height: 4),
-                    Text('Mensagem: $_statusMessage'),
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton.icon(
+                        onPressed: _isLoading ? null : _testarConexao,
+                        icon: const Icon(Icons.sync),
+                        label: const Text('Testar Conexão / Ler Status'),
+                      ),
+                    ),
                   ],
                 ),
               ),
             ),
-            const SizedBox(height: 24),
-            const Text(
-              'Credenciais do Wi-Fi',
-              style: TextStyle(fontWeight: FontWeight.bold),
-            ),
             const SizedBox(height: 12),
-            Form(
-              key: _formKey,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  TextFormField(
-                    controller: _ssidController,
-                    decoration: const InputDecoration(labelText: 'SSID'),
-                    validator: (value) {
-                      if (value == null || value.trim().isEmpty) {
-                        return 'Informe o SSID da rede Wi-Fi.';
-                      }
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: 12),
-                  TextFormField(
-                    controller: _passwordController,
-                    decoration: const InputDecoration(labelText: 'Senha Wi-Fi'),
-                    obscureText: true,
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Informe a senha da rede Wi-Fi.';
-                      }
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: 12),
-                  TextFormField(
-                    controller: _topicController,
-                    decoration: const InputDecoration(
-                      labelText: 'Tópico ntfy.sh',
-                      hintText: 'Ex: meu_topico_secreto_sentinel',
+            Card(
+              color: AppConfig.cardColor,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('📡 Rede Wi-Fi Alvo', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                    const SizedBox(height: 12),
+                    TextFormField(
+                      controller: _ssidController,
+                      decoration: const InputDecoration(labelText: 'SSID (Nome da Rede)', border: OutlineInputBorder()),
                     ),
-                    validator: (value) {
-                      if (value == null || value.trim().isEmpty) {
-                        return 'Informe o tópico ntfy.sh.';
-                      }
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: 20),
-                  ElevatedButton(
-                    onPressed: _isLoading ? null : _saveConfig,
-                    child: _isLoading
-                        ? const SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : const Text('Enviar configuração para ESP32'),
-                  ),
-                  const SizedBox(height: 8),
-                  OutlinedButton(
-                    onPressed: _loadConfig,
-                    child: const Text('Carregar configuração atual do ESP32'),
-                  ),
-                ],
+                    const SizedBox(height: 12),
+                    TextFormField(
+                      controller: _passwordController,
+                      decoration: const InputDecoration(labelText: 'Senha da Rede', border: OutlineInputBorder()),
+                      obscureText: true,
+                    ),
+                  ],
+                ),
               ),
             ),
+            const SizedBox(height: 12),
+            Card(
+              color: AppConfig.cardColor,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('🔔 Serviços & Notificações', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                    const SizedBox(height: 12),
+                    TextFormField(
+                      controller: _topicController,
+                      decoration: const InputDecoration(labelText: 'Tópico Ntfy.sh', border: OutlineInputBorder()),
+                    ),
+                    const SizedBox(height: 12),
+                    TextFormField(
+                      controller: _duckDomController,
+                      decoration: const InputDecoration(labelText: 'DuckDNS Domínio (Opcional)', border: OutlineInputBorder()),
+                    ),
+                    const SizedBox(height: 12),
+                    TextFormField(
+                      controller: _duckTokController,
+                      decoration: const InputDecoration(labelText: 'DuckDNS Token (Opcional)', border: OutlineInputBorder()),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            Card(
+              color: AppConfig.cardColor,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('📻 Códigos RF 433MHz', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextFormField(
+                            controller: _camp1Controller,
+                            decoration: const InputDecoration(labelText: 'Código Campainha 1', border: OutlineInputBorder()),
+                            keyboardType: TextInputType.number,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: TextFormField(
+                            controller: _camp2Controller,
+                            decoration: const InputDecoration(labelText: 'Código Campainha 2', border: OutlineInputBorder()),
+                            keyboardType: TextInputType.number,
+                          ),
+                        ),
+                      ],
+                    ),
+                ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 24),
+            ElevatedButton.icon(
+              onPressed: _isLoading ? null : _salvarConfig,
+              icon: _isLoading
+                  ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black))
+                  : const Icon(Icons.save),
+              label: const Padding(
+                padding: EdgeInsets.all(16.0),
+                child: Text('Salvar na Flash e Reiniciar ESP32', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppConfig.accentColor,
+                foregroundColor: Colors.black,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+            ),
+            const SizedBox(height: 32),
           ],
         ),
       ),
