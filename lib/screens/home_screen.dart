@@ -70,9 +70,9 @@ class _HomeScreenState extends State<HomeScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.videocam_off, size: 64, color: AppConfig.mutedTextColor),
+            const Icon(Icons.videocam_off, size: 64, color: AppConfig.mutedTextColor),
             const SizedBox(height: 16),
-            Text(
+            const Text(
               'Nenhuma câmera configurada.',
               style: TextStyle(color: AppConfig.mutedTextColor, fontSize: 16),
             ),
@@ -115,10 +115,10 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ],
         ),
-        backgroundColor: AppConfig.cardColor.withOpacity(0.95),
+        backgroundColor: AppConfig.cardColor.withValues(alpha: 0.95),
         elevation: 0,
-        iconTheme: IconThemeData(color: AppConfig.accentColor),
-        actionsIconTheme: IconThemeData(color: AppConfig.accentColor),
+        iconTheme: const IconThemeData(color: AppConfig.accentColor),
+        actionsIconTheme: const IconThemeData(color: AppConfig.accentColor),
         actions: [
           if (_selectedIndex == 0)
             IconButton(

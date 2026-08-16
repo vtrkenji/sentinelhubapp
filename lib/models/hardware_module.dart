@@ -1,5 +1,6 @@
 enum ModuleType {
   wt32Eth01, // Para gateway com campainha RF
+  gatewayEsp32, // Unified Gateway ESP32 (centraliza configurações avançadas)
   genericEsp32, // Para outros dispositivos ESP32 genéricos
   rfGateway, // Focado apenas em RF
   pirSensor,
@@ -11,6 +12,8 @@ extension ModuleTypeExtension on ModuleType {
     switch (this) {
       case ModuleType.wt32Eth01:
         return 'Gateway WT32-ETH01 (RF)';
+      case ModuleType.gatewayEsp32:
+        return 'Gateway ESP32 (Centralizado)';
       case ModuleType.genericEsp32:
         return 'Módulo ESP32 Genérico';
       case ModuleType.rfGateway:

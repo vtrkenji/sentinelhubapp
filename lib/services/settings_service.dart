@@ -11,6 +11,7 @@ class SettingsService {
   static const String esp32Camp2Key = 'esp32_camp2';
   static const String webhookEnabledKey = 'webhook_enabled';
   static const String webhookPortKey = 'webhook_port';
+  static const String ntfyTopicKey = 'ntfy_topic';
 
   Future<void> saveEsp32Ip(String ip) async {
     final prefs = await SharedPreferences.getInstance();
@@ -109,5 +110,15 @@ class SettingsService {
   Future<int> loadWebhookPort() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getInt(webhookPortKey) ?? 8080;
+  }
+
+  Future<void> saveNtfyTopic(String topic) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(ntfyTopicKey, topic);
+  }
+
+  Future<String> loadNtfyTopic() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(ntfyTopicKey) ?? '';
   }
 }

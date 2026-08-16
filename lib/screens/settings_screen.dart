@@ -138,7 +138,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                       onPressed: () => _editCamera(camera),
                     ),
                     IconButton(
-                      icon: Icon(Icons.delete, color: AppConfig.alertColor),
+                      icon: const Icon(Icons.delete, color: AppConfig.alertColor),
                       tooltip: 'Remover Câmera',
                       onPressed: () => _deleteCamera(camera.id),
                     ),
@@ -235,7 +235,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                       onPressed: () => _editModule(module),
                     ),
                     IconButton(
-                      icon: Icon(Icons.delete, color: AppConfig.alertColor),
+                      icon: const Icon(Icons.delete, color: AppConfig.alertColor),
                       tooltip: 'Remover Módulo',
                       onPressed: () => _deleteModule(module.id),
                     ),

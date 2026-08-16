@@ -140,7 +140,7 @@ class _CameraStreamTileState extends State<CameraStreamTile> {
       clipBehavior: Clip.antiAlias,
       color: AppConfig.cardColor,
       shape: RoundedRectangleBorder(
-        side: BorderSide(color: AppConfig.accentColor.withOpacity(0.12), width: 1),
+        side: BorderSide(color: AppConfig.accentColor.withValues(alpha: 0.12), width: 1),
         borderRadius: BorderRadius.circular(12),
       ),
       child: _isPlaying && _videoController != null
@@ -160,13 +160,13 @@ class _CameraStreamTileState extends State<CameraStreamTile> {
             children: [
               Icon(
                 _hasError ? Icons.error_outline : Icons.videocam_off_outlined,
-                color: _hasError ? AppConfig.alertColor : AppConfig.accentColor.withOpacity(0.92),
+                color: _hasError ? AppConfig.alertColor : AppConfig.accentColor.withValues(alpha: 0.92),
                 size: 36,
               ),
               const SizedBox(height: 6),
               Text(
                 widget.camera.name,
-                style: TextStyle(
+                style: const TextStyle(
                     color: AppConfig.textColor,
                     fontWeight: FontWeight.bold,
                     fontSize: 13),
@@ -174,7 +174,7 @@ class _CameraStreamTileState extends State<CameraStreamTile> {
               ),
               const SizedBox(height: 2),
               if (_hasError)
-                Text('Erro de conexão',
+                const Text('Erro de conexão',
                     style: TextStyle(color: AppConfig.alertColor, fontSize: 11)),
               const SizedBox(height: 8),
               ElevatedButton.icon(
@@ -207,10 +207,10 @@ class _CameraStreamTileState extends State<CameraStreamTile> {
 
         if (_hasError)
           Container(
-            color: AppConfig.backgroundColor.withOpacity(0.75),
+            color: AppConfig.backgroundColor.withValues(alpha: 0.75),
             alignment: Alignment.center,
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
+            child: const Padding(
+              padding: EdgeInsets.all(16.0),
               child: Text(
                 'Erro ao exibir vídeo.\nVerifique a câmera e a conexão.',
                 style: TextStyle(color: AppConfig.textColor, fontSize: 14),
@@ -278,7 +278,7 @@ class _CameraStreamTileState extends State<CameraStreamTile> {
                       Flexible(
                         child: Text(
                           widget.camera.name,
-                          style: TextStyle(
+                          style: const TextStyle(
                             color: AppConfig.textColor,
                             fontWeight: FontWeight.bold,
                             fontSize: 12,

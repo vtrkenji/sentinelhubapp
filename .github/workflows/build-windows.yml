@@ -3,8 +3,6 @@ name: Build Windows
 on:
   push:
     branches: [ "main" ]
-  release:
-    types: [published]
   workflow_dispatch:
 
 jobs:
@@ -27,22 +25,22 @@ jobs:
     - name: Build Windows
       run: flutter build windows --release
 
-    - name: Zip release assets
-      run: |
-        powershell Compress-Archive -Path build/windows/x64/runner/Release/* -DestinationPath sentinel_hub_windows_x64.zip
+    # Compacta a pasta Release num arquivo .zip usando PowerShell
+    - name: Compress Build
+      run: Compress-Archive -Path build\windows\x64\runner\Release\* -DestinationPath sentinel_hub_windows_x64.zip
 
-    # Salva o .zip do Windows na aba Actions a cada push
     - name: Upload Artifact
       uses: actions/upload-artifact@v4
       with:
         name: sentinel-hub-windows
         path: sentinel_hub_windows_x64.zip
 
-    # Envia para o Release apenas se o gatilho for uma publicação oficial
-    - name: Upload Release Asset
-      if: github.event_name == 'release'
+    # Atualiza a mesma release "latest" com o arquivo Windows
+    - name: Automatic Latest Release
       uses: softprops/action-gh-release@v2
       with:
+        tag_name: latest
         files: sentinel_hub_windows_x64.zip
+        make_latest: true
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
