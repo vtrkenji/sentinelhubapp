@@ -207,7 +207,7 @@ class _RecordingsScreenState extends State<RecordingsScreen> {
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: AppConfig.cardColor,
-        border: Border.all(color: AppConfig.accentColor.withAlpha(0.24)),
+        border: Border.all(color: AppConfig.accentColor.withAlpha(61)),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Column(

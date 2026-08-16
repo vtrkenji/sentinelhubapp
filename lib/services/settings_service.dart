@@ -91,6 +91,7 @@ class SettingsService {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getString(esp32Camp2Key) ?? '4827093';
   }
+  Future<void> saveWebhookEnabled(bool enabled) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(webhookEnabledKey, enabled);
   }
