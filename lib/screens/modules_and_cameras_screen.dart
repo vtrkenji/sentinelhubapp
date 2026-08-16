@@ -5,17 +5,17 @@ import '../services/camera_service.dart';
 import 'camera_edit_screen.dart';
 import '../models/hardware_module.dart';
 import '../services/module_service.dart';
-import 'esp32_config_screen.dart';
 import 'module_edit_screen.dart';
+import 'package:sentinel_hub/screens/module_edit_screen.dart';
 
-class SettingsScreen extends StatefulWidget {
-  const SettingsScreen({super.key});
+class ModulesAndCamerasScreen extends StatefulWidget {
+  const ModulesAndCamerasScreen({super.key});
 
   @override
-  State<SettingsScreen> createState() => _SettingsScreenState();
+  State<ModulesAndCamerasScreen> createState() => _ModulesAndCamerasScreenState();
 }
 
-class _SettingsScreenState extends State<SettingsScreen>
+class _ModulesAndCamerasScreenState extends State<ModulesAndCamerasScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
 
@@ -30,7 +30,7 @@ class _SettingsScreenState extends State<SettingsScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
+    _tabController = TabController(length: 2, vsync: this);
     _tabController.addListener(_handleTabChanged);
     _loadCameras();
     _loadModules();
@@ -65,13 +65,12 @@ class _SettingsScreenState extends State<SettingsScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('VSGuard OS • Configurações'),
+        title: const Text('Módulos e Câmeras'),
         bottom: TabBar(
           controller: _tabController,
           tabs: const [
             Tab(icon: Icon(Icons.videocam), text: 'Câmeras'),
             Tab(icon: Icon(Icons.developer_board), text: 'Módulos'),
-            Tab(icon: Icon(Icons.wifi), text: 'ESP32'),
           ],
         ),
       ),
@@ -80,25 +79,17 @@ class _SettingsScreenState extends State<SettingsScreen>
         children: [
           _buildCamerasTab(context),
           _buildModulesTab(context),
-          const Esp32ConfigBody(),
         ],
       ),
-      floatingActionButton: _buildFloatingActionButton(),
-    );
-  }
-
-  Widget? _buildFloatingActionButton() {
-    if (_tabController.index == 2) {
-      return null;
-    }
-    return FloatingActionButton(
-      onPressed: _tabController.index == 0
-          ? () => _editCamera(null)
-          : () => _editModule(null),
-      tooltip: _tabController.index == 0
-          ? 'Adicionar Nova Câmera'
-          : 'Adicionar Novo Módulo',
-      child: const Icon(Icons.add),
+      floatingActionButton: FloatingActionButton(
+        onPressed: _tabController.index == 0
+            ? () => _editCamera(null)
+            : () => _editModule(null),
+        tooltip: _tabController.index == 0
+            ? 'Adicionar Nova Câmera'
+            : 'Adicionar Novo Módulo',
+        child: const Icon(Icons.add),
+      ),
     );
   }
 

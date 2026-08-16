@@ -21,7 +21,6 @@ class _ModuleEditScreenState extends State<ModuleEditScreen> {
   late TextEditingController _ipController;
   late TextEditingController _rfCodeController;
   late TextEditingController _rfProtocolController;
-  // Advanced ESP32 fields
   late TextEditingController _ssidController;
   late TextEditingController _passwordController;
   late TextEditingController _ntfyController;
@@ -31,7 +30,6 @@ class _ModuleEditScreenState extends State<ModuleEditScreen> {
   late TextEditingController _camp2Controller;
 
   final _esp32Service = Esp32Service();
-
   ModuleType _selectedModuleType = ModuleType.genericEsp32;
 
   @override
@@ -40,16 +38,11 @@ class _ModuleEditScreenState extends State<ModuleEditScreen> {
     final module = widget.module;
     _nameController = TextEditingController(text: module?.name ?? '');
     _ipController = TextEditingController(text: module?.ipAddress ?? '');
-
     _selectedModuleType = module?.type ?? ModuleType.genericEsp32;
 
-    // Initialize controllers for specific settings
     final specificSettings = module?.specificSettings ?? {};
-    _rfCodeController =
-        TextEditingController(text: specificSettings['rfCode'] ?? '');
-    _rfProtocolController =
-        TextEditingController(text: specificSettings['rfProtocol'] ?? '6');
-    // Advanced ESP32 settings initialization
+    _rfCodeController = TextEditingController(text: specificSettings['rfCode'] ?? '');
+    _rfProtocolController = TextEditingController(text: specificSettings['rfProtocol'] ?? '6');
     _ssidController = TextEditingController(text: specificSettings['ssid'] ?? '');
     _passwordController = TextEditingController(text: specificSettings['pass'] ?? '');
     _ntfyController = TextEditingController(text: specificSettings['ntfy'] ?? '');
@@ -76,33 +69,21 @@ class _ModuleEditScreenState extends State<ModuleEditScreen> {
   }
 
   String? _validateIpAddress(String? value) {
-    if (value == null || value.isEmpty) {
-      return 'O endereço IP não pode ser vazio.';
-    }
-    final ipRegex = RegExp(
-        r'^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$');
-    if (!ipRegex.hasMatch(value)) {
-      return 'Formato de endereço IP inválido.';
-    }
+    if (value == null || value.isEmpty) return 'O endereço IP não pode ser vazio.';
+    final ipRegex = RegExp(r'^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$');
+    if (!ipRegex.hasMatch(value)) return 'Formato de endereço IP inválido.';
     return null;
   }
 
   String? _validateNotEmpty(String? value) {
-    if (value == null || value.isEmpty) {
-      return 'Este campo não pode ser vazio.';
-    }
+    if (value == null || value.isEmpty) return 'Este campo não pode ser vazio.';
     return null;
   }
 
   Future<void> _loadFromDevice() async {
     final ip = _ipController.text.trim();
     if (ip.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-            content: const Text('Informe o IP do módulo para carregar.'),
-            backgroundColor: AppConfig.accentColor.withAlpha((0.14 * 255).round()),
-            behavior: SnackBarBehavior.floating),
-      );
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Informe o IP do módulo para carregar.')));
       return;
     }
 
@@ -117,45 +98,24 @@ class _ModuleEditScreenState extends State<ModuleEditScreen> {
         if (status.containsKey('camp1')) _camp1Controller.text = status['camp1'].toString();
         if (status.containsKey('camp2')) _camp2Controller.text = status['camp2'].toString();
       });
-
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-        content: const Text('Configurações carregadas do ESP32.'),
-        backgroundColor: AppConfig.accentColor.withAlpha((0.16 * 255).round()),
-        behavior: SnackBarBehavior.floating),
-      );
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Configurações carregadas do ESP32.'), backgroundColor: Colors.green));
     } else {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-        content: Text('Falha ao comunicar com o dispositivo em $ip'),
-        backgroundColor: AppConfig.alertColor.withAlpha((0.16 * 255).round()),
-        behavior: SnackBarBehavior.floating),
-      );
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Falha ao comunicar com o dispositivo em $ip'), backgroundColor: Colors.red));
     }
   }
 
   Future<void> _saveModule() async {
-    if (!_formKey.currentState!.validate()) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-            content: const Text('Por favor, corrija os erros no formulário.'),
-            backgroundColor: AppConfig.accentColor.withAlpha((0.14 * 255).round()),
-            behavior: SnackBarBehavior.floating),
-      );
-      return;
-    }
+    if (!_formKey.currentState!.validate()) return;
 
     try {
       final specificSettings = <String, dynamic>{};
-      if (_selectedModuleType == ModuleType.wt32Eth01 ||
-          _selectedModuleType == ModuleType.genericEsp32 ||
-          _selectedModuleType == ModuleType.rfGateway) {
-        // RF settings (if present)
+      
+      if (_selectedModuleType == ModuleType.wt32Eth01 || 
+          _selectedModuleType == ModuleType.rfGateway || 
+          _selectedModuleType == ModuleType.genericEsp32 || 
+          _selectedModuleType == ModuleType.gatewayEsp32) {
         specificSettings['rfCode'] = _rfCodeController.text;
         specificSettings['rfProtocol'] = _rfProtocolController.text;
-        // ESP32 advanced settings
         specificSettings['ssid'] = _ssidController.text;
         specificSettings['pass'] = _passwordController.text;
         specificSettings['ntfy'] = _ntfyController.text;
@@ -166,18 +126,16 @@ class _ModuleEditScreenState extends State<ModuleEditScreen> {
       }
 
       final moduleData = HardwareModule(
-        id: widget.module?.id ?? '', // ID will be generated by service if new
+        id: widget.module?.id ?? '', 
         name: _nameController.text,
         ipAddress: _ipController.text,
         type: _selectedModuleType,
         specificSettings: specificSettings,
       );
 
-      // If the module represents an ESP32-capable device, try to send
-      // the configurations to the device's /salvar endpoint before saving.
-        if (_selectedModuleType == ModuleType.genericEsp32 ||
-          _selectedModuleType == ModuleType.wt32Eth01 ||
-          _selectedModuleType == ModuleType.rfGateway ||
+      if (_selectedModuleType == ModuleType.wt32Eth01 || 
+          _selectedModuleType == ModuleType.rfGateway || 
+          _selectedModuleType == ModuleType.genericEsp32 || 
           _selectedModuleType == ModuleType.gatewayEsp32) {
         final ip = _ipController.text.trim();
         final posted = await _esp32Service.salvarConfiguracoes(
@@ -193,12 +151,7 @@ class _ModuleEditScreenState extends State<ModuleEditScreen> {
 
         if (!posted) {
           if (!mounted) return;
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-                content: const Text('Falha ao salvar no ESP32. Verifique a conexão.'),
-                backgroundColor: AppConfig.alertColor.withAlpha((0.16 * 255).round()),
-                behavior: SnackBarBehavior.floating),
-          );
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Falha ao salvar no ESP32. Verifique a conexão.'), backgroundColor: Colors.red));
           return;
         }
       }
@@ -210,21 +163,11 @@ class _ModuleEditScreenState extends State<ModuleEditScreen> {
       }
 
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-        content: const Text('Módulo salvo com sucesso!'),
-        backgroundColor: AppConfig.accentColor.withAlpha((0.16 * 255).round()),
-        behavior: SnackBarBehavior.floating),
-      );
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Módulo salvo com sucesso!'), backgroundColor: Colors.green));
       Navigator.of(context).pop(true);
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-            content: Text('Erro ao salvar módulo: $e'),
-            backgroundColor: AppConfig.alertColor.withAlpha((0.16 * 255).round()),
-            behavior: SnackBarBehavior.floating),
-      );
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Erro ao salvar módulo: $e'), backgroundColor: Colors.red));
     }
   }
 
@@ -232,14 +175,9 @@ class _ModuleEditScreenState extends State<ModuleEditScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title:
-            Text(widget.module == null ? 'Adicionar Módulo' : 'Editar Módulo'),
+        title: Text(widget.module == null ? 'Adicionar Módulo' : 'Editar Módulo'),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.save),
-            onPressed: _saveModule,
-            tooltip: 'Salvar Módulo',
-          ),
+          IconButton(icon: const Icon(Icons.save), onPressed: _saveModule, tooltip: 'Salvar Módulo'),
         ],
       ),
       body: SingleChildScrollView(
@@ -249,47 +187,20 @@ class _ModuleEditScreenState extends State<ModuleEditScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Text('Informações Gerais',
-                  style: Theme.of(context).textTheme.titleLarge),
+              Text('Informações Gerais', style: Theme.of(context).textTheme.titleLarge),
               const SizedBox(height: 16),
-              TextFormField(
-                controller: _nameController,
-                decoration: const InputDecoration(
-                    labelText: 'Nome/Identificador do Módulo'),
-                validator: _validateNotEmpty,
-              ),
+              TextFormField(controller: _nameController, decoration: const InputDecoration(labelText: 'Nome/Identificador do Módulo'), validator: _validateNotEmpty),
               const SizedBox(height: 16),
-              TextFormField(
-                controller: _ipController,
-                decoration: const InputDecoration(labelText: 'Endereço IP'),
-                validator: _validateIpAddress,
-                keyboardType: TextInputType.number,
-              ),
+              TextFormField(controller: _ipController, decoration: const InputDecoration(labelText: 'Endereço IP'), validator: _validateIpAddress, keyboardType: TextInputType.number),
               const SizedBox(height: 8),
-              Align(
-                alignment: Alignment.centerRight,
-                child: OutlinedButton.icon(
-                  onPressed: _loadFromDevice,
-                  icon: const Icon(Icons.sync),
-                  label: const Text('Carregar do ESP32'),
-                ),
-              ),
+              Align(alignment: Alignment.centerRight, child: OutlinedButton.icon(onPressed: _loadFromDevice, icon: const Icon(Icons.sync), label: const Text('Carregar do ESP32'))),
               const SizedBox(height: 16),
               DropdownButtonFormField<ModuleType>(
                 initialValue: _selectedModuleType,
                 decoration: const InputDecoration(labelText: 'Tipo de Módulo'),
-                items: ModuleType.values.map((type) {
-                  return DropdownMenuItem(
-                    value: type,
-                    child: Text(type.displayName),
-                  );
-                }).toList(),
+                items: ModuleType.values.map((type) => DropdownMenuItem(value: type, child: Text(type.displayName))).toList(),
                 onChanged: (type) {
-                  if (type != null) {
-                    setState(() {
-                      _selectedModuleType = type;
-                    });
-                  }
+                  if (type != null) setState(() => _selectedModuleType = type);
                 },
               ),
               const SizedBox(height: 24),
@@ -304,83 +215,40 @@ class _ModuleEditScreenState extends State<ModuleEditScreen> {
   }
 
   List<Widget> _buildSpecificSettingsFields() {
-      if (_selectedModuleType == ModuleType.wt32Eth01 ||
-        _selectedModuleType == ModuleType.rfGateway ||
-        _selectedModuleType == ModuleType.genericEsp32 ||
+    if (_selectedModuleType == ModuleType.wt32Eth01 || 
+        _selectedModuleType == ModuleType.rfGateway || 
+        _selectedModuleType == ModuleType.genericEsp32 || 
         _selectedModuleType == ModuleType.gatewayEsp32) {
       return [
-        Text('Configurações Específicas',
-            style: Theme.of(context).textTheme.titleLarge),
+        Text('Configurações Específicas', style: Theme.of(context).textTheme.titleLarge),
         const SizedBox(height: 16),
-        // RF fields
-        TextFormField(
-          controller: _rfCodeController,
-          decoration:
-              const InputDecoration(labelText: 'Código RF da Campainha'),
-          keyboardType: TextInputType.number,
-          validator: _validateNotEmpty,
-        ),
+        TextFormField(controller: _rfCodeController, decoration: const InputDecoration(labelText: 'Código RF da Campainha'), keyboardType: TextInputType.number, validator: _validateNotEmpty),
         const SizedBox(height: 16),
-        TextFormField(
-          controller: _rfProtocolController,
-          decoration: const InputDecoration(labelText: 'Protocolo RF'),
-          keyboardType: TextInputType.number,
-          validator: _validateNotEmpty,
-        ),
+        TextFormField(controller: _rfProtocolController, decoration: const InputDecoration(labelText: 'Protocolo RF'), keyboardType: TextInputType.number, validator: _validateNotEmpty),
         const SizedBox(height: 16),
-        // ESP32 advanced group
         const Divider(),
         const SizedBox(height: 12),
         const Text('Parâmetros Avançados ESP32', style: TextStyle(fontWeight: FontWeight.bold)),
         const SizedBox(height: 12),
-        TextFormField(
-          controller: _ssidController,
-          decoration: const InputDecoration(labelText: 'SSID (Wi‑Fi)'),
-        ),
+        TextFormField(controller: _ssidController, decoration: const InputDecoration(labelText: 'SSID (Wi‑Fi)')),
         const SizedBox(height: 12),
-        TextFormField(
-          controller: _passwordController,
-          decoration: const InputDecoration(labelText: 'Senha Wi‑Fi'),
-          obscureText: true,
-        ),
+        TextFormField(controller: _passwordController, decoration: const InputDecoration(labelText: 'Senha Wi‑Fi'), obscureText: true),
         const SizedBox(height: 12),
-        TextFormField(
-          controller: _ntfyController,
-          decoration: const InputDecoration(labelText: 'Tópico Ntfy.sh'),
-        ),
+        TextFormField(controller: _ntfyController, decoration: const InputDecoration(labelText: 'Tópico Ntfy.sh do ESP32')),
         const SizedBox(height: 12),
-        TextFormField(
-          controller: _duckDomController,
-          decoration: const InputDecoration(labelText: 'DuckDNS Domínio'),
-        ),
+        TextFormField(controller: _duckDomController, decoration: const InputDecoration(labelText: 'DuckDNS Domínio')),
         const SizedBox(height: 12),
-        TextFormField(
-          controller: _duckTokController,
-          decoration: const InputDecoration(labelText: 'DuckDNS Token'),
-        ),
+        TextFormField(controller: _duckTokController, decoration: const InputDecoration(labelText: 'DuckDNS Token')),
         const SizedBox(height: 12),
         Row(
           children: [
-            Expanded(
-              child: TextFormField(
-                controller: _camp1Controller,
-                decoration: const InputDecoration(labelText: 'Código Campainha 1'),
-                keyboardType: TextInputType.number,
-              ),
-            ),
+            Expanded(child: TextFormField(controller: _camp1Controller, decoration: const InputDecoration(labelText: 'Código Campainha 1'), keyboardType: TextInputType.number)),
             const SizedBox(width: 12),
-            Expanded(
-              child: TextFormField(
-                controller: _camp2Controller,
-                decoration: const InputDecoration(labelText: 'Código Campainha 2'),
-                keyboardType: TextInputType.number,
-              ),
-            ),
+            Expanded(child: TextFormField(controller: _camp2Controller, decoration: const InputDecoration(labelText: 'Código Campainha 2'), keyboardType: TextInputType.number)),
           ],
         ),
       ];
     }
-    // Return empty list if no specific settings for the selected type
     return [];
   }
 }
