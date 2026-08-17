@@ -19,11 +19,20 @@ jobs:
         flutter-version: '3.x'
         channel: 'stable'
 
-    - name: Install Linux dependencies
-      # Bibliotecas essenciais para Flutter Desktop e Notificações Locais no Linux
+    - name: Instalar dependências do Linux (MPV, GTK e Ferramentas)
       run: |
         sudo apt-get update -y
-        sudo apt-get install -y clang cmake ninja-build pkg-config libgtk-3-dev liblzma-dev libasound2-dev libappindicator3-dev
+        sudo apt-get install -y \
+          clang \
+          cmake \
+          ninja-build \
+          pkg-config \
+          libgtk-3-dev \
+          liblzma-dev \
+          libasound2-dev \
+          libappindicator3-dev \
+          libmpv-dev \
+          mpv
 
     - name: Install dependencies
       run: flutter pub get
