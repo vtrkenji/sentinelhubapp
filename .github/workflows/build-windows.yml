@@ -1,8 +1,9 @@
-name: Build Windows
+name: Build Windows (.exe)
 
 on:
   push:
-    branches: [ "main" ]
+    tags:
+      - 'v*' # Dispara a build SOMENTE quando você enviar uma tag, ex: git push origin v1.0.7
   workflow_dispatch:
 
 jobs:
@@ -22,10 +23,12 @@ jobs:
     - name: Install dependencies
       run: flutter pub get
 
+    - name: Enable Desktop Support
+      run: flutter config --enable-windows-desktop
+
     - name: Build Windows
       run: flutter build windows --release
 
-    # Compacta a pasta Release num arquivo .zip usando PowerShell
     - name: Compress Build
       run: Compress-Archive -Path build\windows\x64\runner\Release\* -DestinationPath sentinel_hub_windows_x64.zip
 
@@ -35,11 +38,12 @@ jobs:
         name: sentinel-hub-windows
         path: sentinel_hub_windows_x64.zip
 
-    # Atualiza a mesma release "latest" com o arquivo Windows
-    - name: Automatic Latest Release
+    - name: Automatic Release
       uses: softprops/action-gh-release@v2
       with:
-        tag_name: latest
+        tag_name: ${{ github.ref_name }} # Pega dinamicamente o nome da tag (ex: v1.0.7)
+        name: "Release ${{ github.ref_name }}"
+        body: "Versão Windows atualizada automaticamente via GitHub Actions."
         files: sentinel_hub_windows_x64.zip
         make_latest: true
       env:

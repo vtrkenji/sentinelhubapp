@@ -10,6 +10,9 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  http: ^1.2.0          # Para chamadas de rede e download
+  path_provider: ^2.1.2 # Para encontrar a pasta temporária do Android
+  open_filex: ^4.4.0    # Para disparar o APK com suporte ao FileProvider
   
   # --- ÚLITILITÁRIOS BASE ---
   shared_preferences: ^2.2.2
