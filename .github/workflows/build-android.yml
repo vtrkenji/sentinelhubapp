@@ -2,8 +2,9 @@ name: Build Android (APK)
 
 on:
   push:
-    branches: [ "main" ] # Dispara automaticamente a cada git push!
-  workflow_dispatch: # Permite apertar o botão de compilar manualmente se precisar
+    tags:
+      - 'v*' # Dispara a build SOMENTE quando você enviar uma tag, ex: git push origin v1.0.5
+  workflow_dispatch:
 
 jobs:
   build:
@@ -34,20 +35,18 @@ jobs:
     - name: Rename APK
       run: mv build/app/outputs/flutter-apk/app-release.apk sentinel_hub_android.apk
 
-    # Salva o APK na aba "Actions" (como backup)
     - name: Upload Artifact
       uses: actions/upload-artifact@v4
       with:
         name: sentinel-hub-apk
         path: sentinel_hub_android.apk
 
-    # NOVO: Cria/Atualiza sempre a Release com a tag "latest"
-    - name: Automatic Latest Release
+    - name: Automatic Release
       uses: softprops/action-gh-release@v2
       with:
-        tag_name: latest
-        name: "Versão Mais Recente (Auto-Build)"
-        body: "Esta versão é compilada e atualizada automaticamente a cada modificação no código."
+        tag_name: ${{ github.ref_name }} # Pega dinamicamente o nome da tag (ex: v1.0.5)
+        name: "Release ${{ github.ref_name }}"
+        body: "Versão atualizada automaticamente via GitHub Actions."
         files: sentinel_hub_android.apk
         make_latest: true
       env:
