@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../config/app_config.dart';
-import 'update_screen.dart'; // Para o botão de update na barra superior, se quiser manter
+import 'update_screen.dart'; // Garanta que o arquivo update_screen.dart está na mesma pasta lib/screens/
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -68,7 +68,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 children: [
                   // Cabeçalho / Topo do Painel
                   Row(
-                    mainAxisAlignment: MainAxisAlignment.between,
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       const Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -101,7 +101,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             onPressed: () {
                               Navigator.push(
                                 context,
-                                MaterialPageRoute(builder: (context) => const UpdateScreen()),
+                                MaterialPageRoute(builder: (context) => UpdateScreen()), // Sem o 'const'
                               );
                             },
                           ),
