@@ -134,7 +134,7 @@ class _UpdateScreenState extends State<UpdateScreen> {
 
       // Handle platform-specific installation / self-update
       if (Platform.isAndroid) {
-        // Android: open APK to trigger system installer
+        // Android: open APK to trigger system installer (requires FileProvider configured)
         final result = await OpenFilex.open(savePath);
         if (result.type != ResultType.done) {
           setState(() {
@@ -196,8 +196,8 @@ try {
   } else {
     \$src = Join-Path \$env:TEMP "update_tmp"
   }
-  Copy-Item -Path (Join-Path \$src '*') -Destination "${appDir.replaceAll(r"\\", r"\\\\") }" -Recurse -Force
-  Start-Process -FilePath "${execPath.replaceAll(r"\\", r"\\\\") }" -WorkingDirectory "${appDir.replaceAll(r"\\", r"\\\\") }"
+  Copy-Item -Path (Join-Path \$src '*') -Destination "${appDir.replaceAll(r"\\", r"\\\\")}" -Recurse -Force
+  Start-Process -FilePath "${execPath.replaceAll(r"\\", r"\\\\")}" -WorkingDirectory "${appDir.replaceAll(r"\\", r"\\\\")}"
   Remove-Item -Recurse -Force "\$env:TEMP\\update_tmp"
 } finally {
   Remove-Item -Path \$MyInvocation.MyCommand.Definition -Force
@@ -285,7 +285,7 @@ try {
                         decoration: BoxDecoration(
                           color: Colors.black26,
                           borderRadius: BorderRadius.circular(8),
-                            border: Border.all(color: AppConfig.accentColor.withAlpha((0.3 * 255).round())),
+                          border: Border.all(color: AppConfig.accentColor.withAlpha((0.3 * 255).round())),
                         ),
                         height: 120,
                         width: double.infinity,
@@ -312,11 +312,11 @@ try {
                           const SizedBox(height: 12),
                           Text(
                             '${(_downloadProgress * 100).toStringAsFixed(0)}%',
-                              style: const TextStyle(
-                                fontSize: 24,
-                                fontWeight: FontWeight.bold,
-                                color: AppConfig.accentColor,
-                              ),
+                            style: const TextStyle(
+                              fontSize: 24,
+                              fontWeight: FontWeight.bold,
+                              color: AppConfig.accentColor,
+                            ),
                           ),
                         ],
                       )
