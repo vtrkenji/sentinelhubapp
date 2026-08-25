@@ -42,7 +42,7 @@ void onStartBackground(ServiceInstance service) async {
   final settingsService = SettingsService();
   String topicoSecreto = AppConfig.ntfyTopic;
   try {
-    final configuredTopic = await settingsService.loadEsp32Topic();
+    final configuredTopic = await settingsService.loadNtfyTopic();
     if (configuredTopic.trim().isNotEmpty) {
       topicoSecreto = configuredTopic.trim();
     }
@@ -52,7 +52,7 @@ void onStartBackground(ServiceInstance service) async {
 
   final String urlStream = '${AppConfig.ntfyBaseUrl}/$topicoSecreto/json';
 
-  debugPrint('[Sentinel Background] Conectando ao canal nativo: $urlStream');
+debugPrint('[kTsentinel Background] Conectando ao canal nativo: $urlStream');
 
   try {
     final client = http.Client();
@@ -75,9 +75,9 @@ void onStartBackground(ServiceInstance service) async {
         // Se for uma mensagem real disparada pelo seu ESP32
         if (payload['event'] == 'message') {
           final String mensagemRecebida = payload['message'] ?? 'Campainha acionada!';
-          final String tituloRecebido = payload['title'] ?? 'Alerta VSGuard OS';
+          final String tituloRecebido = payload['title'] ?? 'Alerta kTsentinel';
 
-          debugPrint("[VSGuard Background] Alerta Capturado: $mensagemRecebida");
+          debugPrint("[kTsentinel Background] Alerta Capturado: $mensagemRecebida");
 
           // Dispara a Notificação Push na tela do telemóvel
           flutterLocalNotificationsPlugin.show(
@@ -134,8 +134,8 @@ Future<void> inicializarServicoSegundoPlano() async {
       autoStart: true,
       isForegroundMode: true, // Garante que o Android não feche o app
       notificationChannelId: 'vsguard_os_foreground',
-      initialNotificationTitle: 'VSGuard OS',
-      initialNotificationContent: 'VSGuard OS monitoramento ativo...',
+      initialNotificationTitle: 'kTsentinel',
+      initialNotificationContent: 'kTsentinel monitoramento ativo...',
       foregroundServiceNotificationId: 888,
     ),
     iosConfiguration: IosConfiguration(), 
@@ -240,7 +240,7 @@ class _SentinelAppState extends State<SentinelApp> {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'VSGuard OS',
+      title: 'kTsentinel',
       navigatorKey: navigatorKey,
       scaffoldMessengerKey: scaffoldMessengerKey,
       debugShowCheckedModeBanner: false,

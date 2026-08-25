@@ -6,14 +6,26 @@
 // tree, read text, and verify that the values of widget properties are correct.
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:sentinel_hub/main.dart';
 
 void main() {
-  testWidgets('App loads SentinelDashboard', (WidgetTester tester) async {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
+  testWidgets('App loads kTsentinel command center', (WidgetTester tester) async {
+    SharedPreferences.setMockInitialValues({});
     await tester.pumpWidget(const SentinelApp());
 
-    expect(find.text('SENTINEL-HUB // MONITOR'), findsOneWidget);
-    // TODO: Add a test for camera offline/waiting stream status once the UI for it is implemented.
+    expect(find.bySemanticsLabel('kTsentinel logo'), findsOneWidget);
+  });
+
+  testWidgets('Home screen shows empty state when no cameras are registered',
+      (WidgetTester tester) async {
+    SharedPreferences.setMockInitialValues({});
+    await tester.pumpWidget(const SentinelApp());
+    await tester.pumpAndSettle();
+
+    expect(find.text('Nenhuma câmera cadastrada'), findsOneWidget);
   });
 }

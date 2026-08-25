@@ -6,10 +6,14 @@ import 'camera_edit_screen.dart';
 import '../models/hardware_module.dart';
 import '../services/module_service.dart';
 import 'module_edit_screen.dart';
-import 'package:sentinel_hub/screens/module_edit_screen.dart';
 
 class ModulesAndCamerasScreen extends StatefulWidget {
-  const ModulesAndCamerasScreen({super.key});
+  final int initialTabIndex;
+
+  const ModulesAndCamerasScreen({
+    super.key,
+    this.initialTabIndex = 0,
+  });
 
   @override
   State<ModulesAndCamerasScreen> createState() => _ModulesAndCamerasScreenState();
@@ -30,7 +34,11 @@ class _ModulesAndCamerasScreenState extends State<ModulesAndCamerasScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
+    _tabController = TabController(
+      length: 2,
+      vsync: this,
+      initialIndex: widget.initialTabIndex.clamp(0, 1),
+    );
     _tabController.addListener(_handleTabChanged);
     _loadCameras();
     _loadModules();

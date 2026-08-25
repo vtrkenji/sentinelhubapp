@@ -2,7 +2,6 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:media_kit/media_kit.dart';
 import 'package:media_kit_video/media_kit_video.dart';
-import 'package:sentinel_hub/screens/app_settings_screen.dart';
 
 import '../../config/app_config.dart';
 import '../../models/camera.dart';
@@ -21,6 +20,9 @@ class CameraStreamTile extends StatefulWidget {
 }
 
 class _CameraStreamTileState extends State<CameraStreamTile> {
+  static final Set<int> _activeTileIds = <int>{};
+  static const int _maxConcurrentStreams = 3;
+
   Player? _player;
   VideoController? _videoController;
 
@@ -29,19 +31,19 @@ class _CameraStreamTileState extends State<CameraStreamTile> {
   bool _hasError = false;
   bool _isMuted = true;
 
-  @override
-  void dispose() {
-    _player?.dispose();
-    super.dispose();
-  }
-
   Future<void> _connect() async {
     if (_isPlaying || _isConnecting) return;
 
     if (!widget.camera.isActive) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-            content: Text('Câmera inativa. Ative-a nas configurações.')),
+        const SnackBar(content: Text('Câmera inativa. Ative-a nas configurações.')),
+      );
+      return;
+    }
+
+    if (_activeTileIds.length >= _maxConcurrentStreams && !_activeTileIds.contains(widget.camera.id)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Limite de live: apenas 3 câmeras ativas ao mesmo tempo.')),
       );
       return;
     }
@@ -52,8 +54,8 @@ class _CameraStreamTileState extends State<CameraStreamTile> {
     });
 
     try {
-      _player = Player(
-          configuration: const PlayerConfiguration(logLevel: MPVLogLevel.warn));
+      _activeTileIds.add(widget.camera.id);
+      _player = Player(configuration: const PlayerConfiguration(logLevel: MPVLogLevel.warn));
       _videoController = VideoController(
         _player!,
         configuration: getVideoControllerConfiguration(),
@@ -71,7 +73,6 @@ class _CameraStreamTileState extends State<CameraStreamTile> {
 
       try {
         if (!kIsWeb) {
-          // ignore: avoid_dynamic_calls
           final dynamic native = _player!.platform;
           if (native.runtimeType.toString() == 'NativePlayer') {
             await native.setProperty('hwdec', 'auto-safe');
@@ -82,7 +83,7 @@ class _CameraStreamTileState extends State<CameraStreamTile> {
           }
         }
       } catch (e) {
-        debugPrint('Erro ao definir propriedades nativas (provavelmente web): $e');
+        debugPrint('Erro ao definir propriedades nativas: $e');
       }
 
       _player!.stream.error.listen((error) {
@@ -104,6 +105,7 @@ class _CameraStreamTileState extends State<CameraStreamTile> {
         });
       }
     } catch (e) {
+      _activeTileIds.remove(widget.camera.id);
       if (mounted) {
         setState(() {
           _hasError = true;
@@ -123,6 +125,7 @@ class _CameraStreamTileState extends State<CameraStreamTile> {
   }
 
   void _disconnect() {
+    _activeTileIds.remove(widget.camera.id);
     _player?.dispose();
     if (mounted) {
       setState(() {
@@ -135,13 +138,21 @@ class _CameraStreamTileState extends State<CameraStreamTile> {
   }
 
   @override
+  void dispose() {
+    _activeTileIds.remove(widget.camera.id);
+    _player?.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Card(
       clipBehavior: Clip.antiAlias,
-      color: AppConfig.cardColor,
+      color: const Color(0xFF0C171D),
+      margin: EdgeInsets.zero,
       shape: RoundedRectangleBorder(
-        side: BorderSide(color: AppConfig.accentColor.withValues(alpha: 0.12), width: 1),
-        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(color: Colors.white.withAlpha(10), width: 1),
+        borderRadius: BorderRadius.circular(10),
       ),
       child: _isPlaying && _videoController != null
           ? _buildPlayerView()
@@ -151,49 +162,50 @@ class _CameraStreamTileState extends State<CameraStreamTile> {
 
   Widget _buildConnectView() {
     return Padding(
-      padding: const EdgeInsets.all(8.0),
-      child: Center(
-        child: SingleChildScrollView(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                _hasError ? Icons.error_outline : Icons.videocam_off_outlined,
-                color: _hasError ? AppConfig.alertColor : AppConfig.accentColor.withValues(alpha: 0.92),
-                size: 36,
-              ),
-              const SizedBox(height: 6),
-              Text(
-                widget.camera.name,
-                style: const TextStyle(
-                    color: AppConfig.textColor,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 13),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 2),
-              if (_hasError)
-                const Text('Erro de conexão',
-                    style: TextStyle(color: AppConfig.alertColor, fontSize: 11)),
-              const SizedBox(height: 8),
-              ElevatedButton.icon(
-                onPressed: _isConnecting ? null : _connect,
-                icon: _isConnecting
-                    ? const SizedBox(
-                        width: 14,
-                        height: 14,
-                        child: CircularProgressIndicator(strokeWidth: 2))
-                    : const Icon(Icons.play_arrow, size: 16),
-                label: Text(_isConnecting ? 'Conectando...' : 'Conectar'),
-                style: ElevatedButton.styleFrom(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                    textStyle: const TextStyle(fontSize: 11)),
-              ),
-            ],
+      padding: const EdgeInsets.all(12.0),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            _hasError ? Icons.error_outline : Icons.videocam_off_outlined,
+            color: _hasError ? AppConfig.alertColor : AppConfig.accentColor.withValues(alpha: 0.92),
+            size: 34,
           ),
-        ),
+          const SizedBox(height: 8),
+          Text(
+            widget.camera.name,
+            style: const TextStyle(
+              color: AppConfig.textColor,
+              fontWeight: FontWeight.bold,
+              fontSize: 13,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 4),
+          if (_hasError)
+            const Text(
+              'Erro de conexão',
+              style: TextStyle(color: AppConfig.alertColor, fontSize: 11),
+            ),
+          const SizedBox(height: 10),
+          ElevatedButton.icon(
+            onPressed: _isConnecting ? null : _connect,
+            icon: _isConnecting
+                ? const SizedBox(
+                    width: 14,
+                    height: 14,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.play_arrow, size: 16),
+            label: Text(_isConnecting ? 'Conectando...' : 'Conectar'),
+            style: ElevatedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              textStyle: const TextStyle(fontSize: 11),
+              backgroundColor: AppConfig.accentColor,
+              foregroundColor: AppConfig.backgroundColor,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -300,19 +312,6 @@ class _CameraStreamTileState extends State<CameraStreamTile> {
                       onPressed: _toggleMute,
                       iconSize: 18,
                       color: AppConfig.textColor,
-                      style: _compactButtonStyle,
-                    ),
-                    const SizedBox(width: 2),
-                    IconButton(
-                      icon: const Icon(Icons.settings),
-                      onPressed: () {
-                        Navigator.of(context).push(
-                          MaterialPageRoute(
-                              builder: (context) => const AppSettingsScreen()),
-                        );
-                      },
-                      iconSize: 18,
-                      color: AppConfig.accentColor,
                       style: _compactButtonStyle,
                     ),
                   ],

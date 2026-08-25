@@ -31,17 +31,15 @@ class CameraService {
   // Método para adicionar uma nova câmera (pode ser usado na tela de configurações)
   Future<void> addCamera(Camera camera) async {
     List<Camera> currentCameras = await getCameras();
-    // Garante que a nova câmera tenha um ID único
     int newId = currentCameras.isEmpty
         ? 1
         : currentCameras.map((c) => c.id).reduce(math.max) + 1;
-    final cameraWithId = Camera(
+
+    final cameraWithId = camera.copyWith(
       id: newId,
-      name: camera.name,
-      rtspUrl: camera.rtspUrl,
-      description: camera.description,
       isActive: camera.isActive,
     );
+
     currentCameras.add(cameraWithId);
     await saveCameras(currentCameras);
   }
