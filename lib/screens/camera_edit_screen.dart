@@ -38,19 +38,17 @@ class _CameraEditScreenState extends State<CameraEditScreen> {
 
   Future<void> _saveCamera() async {
     if (_formKey.currentState?.validate() ?? false) {
-      final newCamera = Camera(
-        id: widget.camera?.id ??
-            0, // ID will be assigned by service for new cameras
+      final baseCamera = widget.camera;
+      final newCamera = (baseCamera ?? Camera(id: 0, name: '', rtspUrl: '')).copyWith(
+        id: baseCamera?.id ?? 0,
         name: _nameController.text.trim(),
         rtspUrl: _rtspUrlController.text.trim(),
         description: _descriptionController.text.trim(),
       );
 
       if (widget.camera == null) {
-        // Add new camera
         await _cameraService.addCamera(newCamera);
       } else {
-        // Update existing camera
         await _cameraService.updateCamera(newCamera);
       }
 

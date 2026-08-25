@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import '../services/settings_service.dart';
 import '../services/ntfy_native_service.dart';
 import '../config/app_config.dart';
-import 'update/update_screen.dart';
 
 class AppSettingsScreen extends StatefulWidget {
   const AppSettingsScreen({super.key});
@@ -43,7 +42,7 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: const Text('Preferências salvas com sucesso!'),
-          backgroundColor: AppConfig.accentColor.withValues(alpha: 0.16 * 255),
+          backgroundColor: AppConfig.accentColor.withAlpha((0.16 * 255).round()),
           behavior: SnackBarBehavior.floating,
         ),
       );
@@ -94,23 +93,7 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> {
                 icon: const Icon(Icons.save),
                 label: const Text('Salvar Preferências'),
               ),
-              const SizedBox(height: 32),
-              const Divider(),
-              const SizedBox(height: 16),
-              Text(
-                'Sistema',
-                style: Theme.of(context).textTheme.titleLarge,
-              ),
-              const SizedBox(height: 16),
-              OutlinedButton.icon(
-                onPressed: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(builder: (context) => const UpdateScreen()),
-                  );
-                },
-                icon: const Icon(Icons.system_update_alt),
-                label: const Text('Verificar Atualizações'),
-              ),
+              const SizedBox(height: 24),
             ],
           ),
         ),

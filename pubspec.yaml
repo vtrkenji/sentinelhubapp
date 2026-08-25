@@ -2,7 +2,7 @@ name: sentinel_hub
 description: "Sistema de monitoramento e automação Sentinel-Hub"
 publish_to: 'none'
 
-version: 1.0.7+1
+version: 1.0.11+1
 
 environment:
   sdk: '>=3.0.0 <4.0.0'
@@ -30,6 +30,7 @@ dependencies:
   media_kit_libs_android_video: ^1.0.4
   media_kit_libs_ios_video: ^1.0.4
   media_kit_libs_windows_video: ^1.0.4
+  flutter_svg: ^2.0.10
   
   # --- NOTIFICAÇÕES LOCAIS E ISOLAMENTO ---
   flutter_background_service: ^5.1.0
@@ -45,3 +46,5 @@ dependency_overrides:
 
 flutter:
   uses-material-design: true
+  assets:
+    - assets/logo/

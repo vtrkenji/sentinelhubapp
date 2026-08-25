@@ -1,6 +1,13 @@
 import 'package:flutter/material.dart';
-import '../../config/app_config.dart';
-import 'update_screen.dart'; // Garanta que o arquivo update_screen.dart está na mesma pasta lib/screens/
+import 'package:flutter_svg/flutter_svg.dart';
+
+import '../config/app_config.dart';
+import '../models/camera.dart';
+import '../services/alert_history_service.dart';
+import '../services/camera_service.dart';
+import 'home/camera_stream_tile.dart';
+import 'modules_and_cameras_screen.dart';
+import 'update_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -10,256 +17,394 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  int _selectedIndex = 0;
+  late Future<List<Camera>> _camerasFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadCameras();
+  }
+
+  void _loadCameras() {
+    setState(() {
+      _camerasFuture = CameraService().getCameras();
+    });
+  }
+
+  Future<void> _openModules({int initialTab = 0}) async {
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => ModulesAndCamerasScreen(initialTabIndex: initialTab),
+      ),
+    );
+    _loadCameras();
+  }
+
+  Widget _headerAction(IconData icon, String label, VoidCallback onPressed) {
+    return TextButton.icon(
+      onPressed: onPressed,
+      icon: Icon(icon, size: 15, color: AppConfig.accentColor),
+      label: Text(
+        label,
+        style: const TextStyle(
+          color: AppConfig.textColor,
+          fontSize: 12,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+      style: TextButton.styleFrom(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        minimumSize: Size.zero,
+      ),
+    );
+  }
+
+  void _openAlertLog() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return AnimatedBuilder(
+          animation: AlertHistoryService.instance,
+          builder: (context, _) {
+            final alerts = AlertHistoryService.instance.alerts;
+
+            return Container(
+              constraints: BoxConstraints(
+                maxHeight: MediaQuery.of(context).size.height * 0.7,
+              ),
+              decoration: const BoxDecoration(
+                color: Color(0xFF0D1419),
+                borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
+              ),
+              padding: const EdgeInsets.fromLTRB(18, 18, 18, 24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      const Icon(Icons.notifications_active_rounded, color: AppConfig.accentColor),
+                      const SizedBox(width: 8),
+                      const Expanded(
+                        child: Text(
+                          'Log de notificações',
+                          style: TextStyle(
+                            color: AppConfig.textColor,
+                            fontSize: 18,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                      IconButton(
+                        onPressed: () => Navigator.of(context).pop(),
+                        icon: const Icon(Icons.close_rounded),
+                        color: AppConfig.textColor,
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  if (alerts.isEmpty)
+                    const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 18.0),
+                      child: Text(
+                        'Nenhuma notificação registrada ainda.',
+                        style: TextStyle(color: AppConfig.mutedTextColor),
+                      ),
+                    )
+                  else
+                    Flexible(
+                      child: ListView.separated(
+                        shrinkWrap: true,
+                        itemCount: alerts.length,
+                        separatorBuilder: (_, __) => const Divider(color: Color(0xFF1D2A31)),
+                        itemBuilder: (context, index) {
+                          final alert = alerts[index];
+                          return ListTile(
+                            contentPadding: EdgeInsets.zero,
+                            leading: const Icon(Icons.warning_amber_rounded, color: AppConfig.alertColor),
+                            title: Text(
+                              alert.title,
+                              style: const TextStyle(
+                                color: AppConfig.textColor,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            subtitle: Text(
+                              '${alert.body}\n${alert.time.toLocal().toString().substring(0, 16)}',
+                              style: const TextStyle(color: AppConfig.mutedTextColor),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppConfig.backgroundColor,
-      body: Row(
-        children: [
-          // ==========================================
-          // 1. MENU LATERAL ESQUERDO
-          // ==========================================
-          Container(
-            width: 200,
-            color: AppConfig.cardColor.withAlpha((0.5 * 255).round()),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Padding(
-                  padding: EdgeInsets.all(24.0),
-                  child: Text(
-                    '05',
-                    style: TextStyle(
-                      fontSize: 28,
-                      fontWeight: FontWeight.bold,
-                      color: AppConfig.accentColor,
-                    ),
-                  ),
-                ),
-                const Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 24.0),
-                  child: Text(
-                    'INDUSTRIAL\nCFTV / Infraestrutura',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.grey,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 32),
-                _buildMenuItem(0, Icons.grid_view, 'Painel'),
-                _buildMenuItem(1, Icons.videocam_outlined, 'Módulos-Câmeras'),
-                _buildMenuItem(2, Icons.settings_outlined, 'Configurações'),
-              ],
-            ),
+      appBar: AppBar(
+        backgroundColor: const Color(0xFF090E13),
+        elevation: 0,
+        automaticallyImplyLeading: false,
+        toolbarHeight: 58,
+        title: FittedBox(
+          fit: BoxFit.scaleDown,
+          alignment: Alignment.centerLeft,
+          child: SvgPicture.asset(
+            'assets/logo/ktsentinel_logo.svg',
+            width: 220,
+            height: 28,
+            semanticsLabel: 'kTsentinel logo',
           ),
-
-          // ==========================================
-          // 2. PAINEL PRINCIPAL (CONTEÚDO)
-          // ==========================================
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.all(24.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Cabeçalho / Topo do Painel
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'VSGUARD OS',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                              letterSpacing: 1.2,
+        ),
+        actions: [
+          const SizedBox(width: 8),
+          _headerAction(Icons.videocam_rounded, 'Módulos e câmeras', () => _openModules(initialTab: 0)),
+          _headerAction(Icons.memory_rounded, 'Config. ESP32', () => _openModules(initialTab: 1)),
+          _headerAction(Icons.system_update_alt_rounded, 'Atualizações', () {
+            Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const UpdateScreen()),
+            );
+          }),
+          const SizedBox(width: 8),
+          AnimatedBuilder(
+            animation: AlertHistoryService.instance,
+            builder: (context, _) {
+              final count = AlertHistoryService.instance.unreadCount;
+              return IconButton(
+                onPressed: _openAlertLog,
+                tooltip: 'Log de notificações',
+                icon: Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    const Icon(Icons.notifications_rounded, color: AppConfig.accentColor),
+                    if (count > 0)
+                      Positioned(
+                        right: -4,
+                        top: -4,
+                        child: Container(
+                          padding: const EdgeInsets.all(4),
+                          decoration: const BoxDecoration(
+                            color: AppConfig.alertColor,
+                            shape: BoxShape.circle,
+                          ),
+                          constraints: const BoxConstraints(minWidth: 14, minHeight: 14),
+                          child: Text(
+                            count > 9 ? '9+' : '$count',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 9,
+                              fontWeight: FontWeight.w700,
                             ),
+                            textAlign: TextAlign.center,
                           ),
-                          Row(
-                            children: [
-                              Text('Painel', style: TextStyle(color: Colors.grey, fontSize: 12)),
-                              SizedBox(width: 8),
-                              Text('• v1.0.9 (Ativo)', style: TextStyle(color: AppConfig.accentColor, fontSize: 12)),
-                            ],
-                          ),
-                        ],
+                        ),
                       ),
-                      Row(
-                        children: [
-                          IconButton(
-                            icon: const Icon(Icons.notifications_none, color: AppConfig.accentColor),
-                            onPressed: () {},
-                          ),
-                          IconButton(
-                            icon: const Icon(Icons.system_update, color: AppConfig.accentColor),
-                            onPressed: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(builder: (context) => UpdateScreen()), // Sem o 'const'
-                              );
-                            },
-                          ),
-                        ],
-                      ),
-                    ],
+                  ],
+                ),
+              );
+            },
+          ),
+          const SizedBox(width: 12),
+        ],
+      ),
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: const EdgeInsets.only(left: 4.0, bottom: 12.0),
+                child: Text(
+                  'Monitoramento',
+                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                    color: AppConfig.textColor,
+                    fontWeight: FontWeight.w700,
                   ),
-                  const SizedBox(height: 24),
-
-                  // Grid de Módulos e Câmeras
-                  Expanded(
-                    child: GridView.count(
-                      crossAxisCount: 2,
-                      crossAxisSpacing: 16,
-                      mainAxisSpacing: 16,
-                      childAspectRatio: 1.8,
-                      children: [
-                        _buildModuleCard('DVR AITEK (CANAL 1)', Icons.storage, false),
-                        _buildModuleCard('CAMERAS IP LOCAL', Icons.videocam, false),
-                        _buildModuleCard('IP2', Icons.router, false),
-                      ],
-                    ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.only(left: 4.0, bottom: 18.0),
+                child: Text(
+                  '${DateTime.now().day.toString().padLeft(2, '0')} ${_monthName(DateTime.now().month)} ${DateTime.now().year} / ${DateTime.now().hour.toString().padLeft(2, '0')}:${DateTime.now().minute.toString().padLeft(2, '0')}:${DateTime.now().second.toString().padLeft(2, '0')}',
+                  style: const TextStyle(
+                    color: AppConfig.mutedTextColor,
+                    fontSize: 11,
+                    letterSpacing: 1,
                   ),
+                ),
+              ),
+              AnimatedBuilder(
+                animation: AlertHistoryService.instance,
+                builder: (context, _) {
+                  final alerts = AlertHistoryService.instance.alerts;
+                  if (alerts.isEmpty) {
+                    return const SizedBox.shrink();
+                  }
 
-                  // Banner de Alerta na Base
-                  Container(
-                    padding: const EdgeInsets.all(16),
+                  return Container(
+                    width: double.infinity,
+                    margin: const EdgeInsets.only(bottom: 14),
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                     decoration: BoxDecoration(
-                      color: const Color(0xFF1F110B), // Tom de alerta escuro
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: AppConfig.alertColor.withAlpha((0.5 * 255).round())),
+                      color: const Color(0xFF111F22),
+                      border: Border.all(color: const Color(0xFF294147)),
                     ),
                     child: Row(
                       children: [
-                        const Icon(Icons.warning_amber_rounded, color: AppConfig.alertColor, size: 36),
-                        const SizedBox(width: 16),
-                        const Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'ATENÇÃO',
-                              style: TextStyle(
-                                color: AppConfig.alertColor,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 16,
-                              ),
+                        const Icon(Icons.warning_amber_rounded, color: AppConfig.alertColor, size: 18),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            alerts.first.title,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              color: AppConfig.textColor,
+                              fontWeight: FontWeight.w700,
+                              fontSize: 12,
                             ),
-                            Text(
-                              '3 dispositivos offline no momento',
-                              style: TextStyle(color: Colors.grey, fontSize: 12),
-                            ),
-                          ],
-                        ),
-                        const Spacer(),
-                        OutlinedButton(
-                          onPressed: () {},
-                          style: OutlinedButton.styleFrom(
-                            side: const BorderSide(color: AppConfig.accentColor),
-                            foregroundColor: AppConfig.accentColor,
                           ),
-                          child: const Text('VER ALERTAS'),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          alerts.first.body,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            color: AppConfig.mutedTextColor,
+                            fontSize: 11,
+                          ),
                         ),
                       ],
                     ),
-                  ),
-                ],
+                  );
+                },
               ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+              Expanded(
+                child: FutureBuilder<List<Camera>>(
+                  future: _camerasFuture,
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return const Center(child: CircularProgressIndicator());
+                    }
 
-  Widget _buildMenuItem(int index, IconData icon, String label) {
-    final bool isSelected = _selectedIndex == index;
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-      decoration: BoxDecoration(
-        color: isSelected ? AppConfig.accentColor.withAlpha((0.15 * 255).round()) : Colors.transparent,
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: ListTile(
-        leading: Icon(icon, color: isSelected ? AppConfig.accentColor : Colors.grey),
-        title: Text(
-          label,
-          style: TextStyle(
-            color: isSelected ? AppConfig.accentColor : Colors.grey,
-            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-            fontSize: 13,
+                    final cameras = (snapshot.data ?? const <Camera>[]).where((camera) => camera.isActive).toList();
+
+                    if (cameras.isEmpty) {
+                      return Center(
+                        child: Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(22),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF101C20),
+                            border: Border.all(color: const Color(0xFF1E2E32)),
+                          ),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Container(
+                                width: 58,
+                                height: 58,
+                                decoration: BoxDecoration(
+                                  color: AppConfig.accentColor.withAlpha(20),
+                                  border: Border.all(color: AppConfig.accentColor.withAlpha(120)),
+                                ),
+                                child: const Icon(
+                                  Icons.videocam_off_rounded,
+                                  color: AppConfig.accentColor,
+                                  size: 28,
+                                ),
+                              ),
+                              const SizedBox(height: 18),
+                              const Text(
+                                'Nenhuma câmera cadastrada',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  color: AppConfig.textColor,
+                                  fontWeight: FontWeight.w700,
+                                  fontSize: 18,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              const Text(
+                                'Cadastre câmeras ou módulos para começar o monitoramento.',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  color: AppConfig.mutedTextColor,
+                                  fontSize: 12,
+                                ),
+                              ),
+                              const SizedBox(height: 18),
+                              ElevatedButton.icon(
+                                onPressed: () => _openModules(initialTab: 0),
+                                icon: const Icon(Icons.add_rounded),
+                                label: const Text('Cadastrar câmeras'),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    }
+
+                    final width = MediaQuery.of(context).size.width;
+                    final crossAxisCount = width < 600 ? 1 : (width < 1100 ? 2 : 3);
+
+                    return GridView.builder(
+                      itemCount: cameras.length,
+                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: crossAxisCount,
+                        crossAxisSpacing: 12,
+                        mainAxisSpacing: 12,
+                        childAspectRatio: 1.55,
+                      ),
+                      itemBuilder: (context, index) {
+                        final camera = cameras[index];
+
+                        return Container(
+                          decoration: BoxDecoration(
+                            color: Colors.transparent,
+                          ),
+                          child: CameraStreamTile(camera: camera),
+                        );
+                      },
+                    );
+                  },
+                ),
+              ),
+            ],
           ),
         ),
-        onTap: () {
-          setState(() {
-            _selectedIndex = index;
-          });
-        },
       ),
     );
   }
 
-  Widget _buildModuleCard(String title, IconData icon, bool isOnline) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppConfig.cardColor,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppConfig.accentColor.withAlpha((0.3 * 255).round())),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Row(
-            children: [
-              Icon(icon, color: AppConfig.accentColor, size: 20),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  title,
-                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-            ],
-          ),
-          Row(
-            children: [
-              Container(
-                width: 8,
-                height: 8,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: isOnline ? Colors.green : Colors.grey,
-                ),
-              ),
-              const SizedBox(width: 6),
-              Text(
-                isOnline ? 'ONLINE' : 'OFFLINE',
-                style: TextStyle(color: isOnline ? Colors.green : Colors.grey, fontSize: 11, fontWeight: FontWeight.bold),
-              ),
-            ],
-          ),
-          SizedBox(
-            width: double.infinity,
-            height: 32,
-            child: ElevatedButton(
-              onPressed: () {},
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppConfig.accentColor,
-                foregroundColor: Colors.black,
-                padding: EdgeInsets.zero,
-              ),
-              child: const Text('CONECTAR', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
-            ),
-          ),
-        ],
-      ),
-    );
+  String _monthName(int month) {
+    const months = [
+      'JAN',
+      'FEV',
+      'MAR',
+      'ABR',
+      'MAI',
+      'JUN',
+      'JUL',
+      'AGO',
+      'SET',
+      'OUT',
+      'NOV',
+      'DEZ',
+    ];
+    return months[month - 1];
   }
 }

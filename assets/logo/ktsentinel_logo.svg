@@ -1,0 +1,19 @@
+<svg width="640" height="180" viewBox="0 0 640 180" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="640" height="180" fill="none"/>
+  <g transform="translate(0,0)">
+    <circle cx="78" cy="90" r="48" fill="#F0B51A"/>
+    <circle cx="78" cy="90" r="32" fill="#0D1014"/>
+    <circle cx="78" cy="90" r="10" fill="#F0B51A"/>
+    <circle cx="78" cy="90" r="54" stroke="#F0B51A" stroke-width="6" stroke-dasharray="8 10"/>
+    <path d="M78 90V55" stroke="#F0B51A" stroke-width="8" stroke-linecap="round"/>
+    <path d="M78 90L92 70" stroke="#F0B51A" stroke-width="8" stroke-linecap="round"/>
+    <path d="M78 90L115 135" stroke="#F0B51A" stroke-width="8" stroke-linecap="round"/>
+    <path d="M78 90L60 70" stroke="#F0B51A" stroke-width="8" stroke-linecap="round"/>
+    <path d="M78 90L42 125" stroke="#F0B51A" stroke-width="8" stroke-linecap="round"/>
+  </g>
+  <g transform="translate(150 0)">
+    <text x="0" y="110" fill="#F2F5F7" font-family="Arial, Helvetica, sans-serif" font-size="76" font-weight="700" letter-spacing="2">kT</text>
+    <text x="120" y="110" fill="#F2F5F7" font-family="Arial, Helvetica, sans-serif" font-size="76" font-weight="700" letter-spacing="2">sentinel</text>
+    <text x="0" y="154" fill="#E3B134" font-family="Arial, Helvetica, sans-serif" font-size="18" letter-spacing="6" font-weight="700">SEGURANÇA QUE FICA NA SUA REDE</text>
+  </g>
+</svg>

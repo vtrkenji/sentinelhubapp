@@ -46,11 +46,13 @@ class SettingsService {
   Future<void> saveEsp32Topic(String topic) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(esp32TopicKey, topic);
+    await prefs.setString(ntfyTopicKey, topic);
   }
 
   Future<String> loadEsp32Topic() async {
     final prefs = await SharedPreferences.getInstance();
-    return prefs.getString(esp32TopicKey) ?? '';
+    final savedTopic = prefs.getString(ntfyTopicKey) ?? prefs.getString(esp32TopicKey) ?? '';
+    return savedTopic;
   }
 
   Future<void> saveEsp32DuckDom(String duckdom) async {
@@ -115,10 +117,11 @@ class SettingsService {
   Future<void> saveNtfyTopic(String topic) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(ntfyTopicKey, topic);
+    await prefs.setString(esp32TopicKey, topic);
   }
 
   Future<String> loadNtfyTopic() async {
     final prefs = await SharedPreferences.getInstance();
-    return prefs.getString(ntfyTopicKey) ?? '';
+    return prefs.getString(ntfyTopicKey) ?? prefs.getString(esp32TopicKey) ?? '';
   }
 }
