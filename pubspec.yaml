@@ -10,15 +10,18 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  http: ^1.2.0          # Para chamadas de rede e download
-  path_provider: ^2.1.2 # Para encontrar a pasta temporária do Android
-  open_filex: ^4.4.0    # Para disparar o APK com suporte ao FileProvider
-  
-  # --- ÚLITILITÁRIOS BASE ---
-  shared_preferences: ^2.2.2
+
+  # --- REDE E UTILITÁRIOS ---
   http: ^1.6.0
   url_launcher: ^6.3.2
   uuid: ^4.6.0
+  shared_preferences: ^2.2.2
+  path_provider: ^2.1.6
+  open_filex: ^4.7.0
+  dio: ^5.11.0
+  web_socket_channel: ^2.2.0
+  package_info_plus: ^10.2.1
+  universal_platform: ^1.1.0
   
   # --- PROCESSAMENTO DE VÍDEO NATIVO (RTSP) ---
   media_kit: ^1.1.10
@@ -31,12 +34,6 @@ dependencies:
   # --- NOTIFICAÇÕES LOCAIS E ISOLAMENTO ---
   flutter_background_service: ^5.1.0
   flutter_local_notifications: ^17.2.4
-  universal_platform: ^1.1.0
-  package_info_plus: ^10.2.1
-  open_filex: ^4.7.0
-  path_provider: ^2.1.6
-  dio: ^5.11.0
-  web_socket_channel: ^2.2.0
 
 dev_dependencies:
   flutter_test:
