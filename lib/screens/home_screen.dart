@@ -40,21 +40,41 @@ class _HomeScreenState extends State<HomeScreen> {
     _loadCameras();
   }
 
-  Widget _headerAction(IconData icon, String label, VoidCallback onPressed) {
-    return TextButton.icon(
-      onPressed: onPressed,
-      icon: Icon(icon, size: 18, color: AppConfig.accentColor),
-      label: Text(
-        label,
-        style: const TextStyle(
-          color: AppConfig.textColor,
-          fontSize: 13,
-          fontWeight: FontWeight.w600,
+  Widget _bottomAction(IconData icon, String label, VoidCallback onPressed) {
+    return Expanded(
+      child: InkWell(
+        onTap: onPressed,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 42,
+                height: 42,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: AppConfig.accentColor.withAlpha(28),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: AppConfig.accentColor.withAlpha(90)),
+                ),
+                child: Icon(icon, size: 24, color: AppConfig.accentColor),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  color: AppConfig.textColor,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
         ),
-      ),
-      style: TextButton.styleFrom(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-        minimumSize: const Size(0, 52),
       ),
     );
   }
@@ -169,14 +189,6 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
         actions: [
           const SizedBox(width: 10),
-          _headerAction(Icons.videocam_rounded, 'Módulos e câmeras', () => _openModules(initialTab: 0)),
-          _headerAction(Icons.memory_rounded, 'Config. ESP32', () => _openModules(initialTab: 1)),
-          _headerAction(Icons.system_update_alt_rounded, 'Atualizações', () {
-            Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => const UpdateScreen()),
-            );
-          }),
-          const SizedBox(width: 10),
           AnimatedBuilder(
             animation: AlertHistoryService.instance,
             builder: (context, _) {
@@ -219,6 +231,26 @@ class _HomeScreenState extends State<HomeScreen> {
           const SizedBox(width: 14),
         ],
       ),
+      bottomNavigationBar: SafeArea(
+        child: Container(
+          decoration: const BoxDecoration(
+            color: Color(0xFF090E13),
+            border: Border(top: BorderSide(color: Color(0xFF1D2A31))),
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 6),
+          child: Row(
+            children: [
+              _bottomAction(Icons.videocam_rounded, 'Módulos e câmeras', () => _openModules(initialTab: 0)),
+              _bottomAction(Icons.memory_rounded, 'Config. ESP32', () => _openModules(initialTab: 1)),
+              _bottomAction(Icons.system_update_alt_rounded, 'Atualizações', () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const UpdateScreen()),
+                );
+              }),
+            ],
+          ),
+        ),
+      ),
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 20),
@@ -226,23 +258,12 @@ class _HomeScreenState extends State<HomeScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Padding(
-                padding: const EdgeInsets.only(left: 4.0, bottom: 12.0),
+                padding: const EdgeInsets.only(left: 4.0, bottom: 18.0),
                 child: Text(
                   'Monitoramento',
                   style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                     color: AppConfig.textColor,
                     fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.only(left: 4.0, bottom: 18.0),
-                child: Text(
-                  '${DateTime.now().day.toString().padLeft(2, '0')} ${_monthName(DateTime.now().month)} ${DateTime.now().year} / ${DateTime.now().hour.toString().padLeft(2, '0')}:${DateTime.now().minute.toString().padLeft(2, '0')}:${DateTime.now().second.toString().padLeft(2, '0')}',
-                  style: const TextStyle(
-                    color: AppConfig.mutedTextColor,
-                    fontSize: 11,
-                    letterSpacing: 1,
                   ),
                 ),
               ),
@@ -389,23 +410,5 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
       ),
     );
-  }
-
-  String _monthName(int month) {
-    const months = [
-      'JAN',
-      'FEV',
-      'MAR',
-      'ABR',
-      'MAI',
-      'JUN',
-      'JUL',
-      'AGO',
-      'SET',
-      'OUT',
-      'NOV',
-      'DEZ',
-    ];
-    return months[month - 1];
   }
 }
