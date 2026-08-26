@@ -43,18 +43,18 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _headerAction(IconData icon, String label, VoidCallback onPressed) {
     return TextButton.icon(
       onPressed: onPressed,
-      icon: Icon(icon, size: 15, color: AppConfig.accentColor),
+      icon: Icon(icon, size: 18, color: AppConfig.accentColor),
       label: Text(
         label,
         style: const TextStyle(
           color: AppConfig.textColor,
-          fontSize: 12,
+          fontSize: 13,
           fontWeight: FontWeight.w600,
         ),
       ),
       style: TextButton.styleFrom(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-        minimumSize: Size.zero,
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+        minimumSize: const Size(0, 52),
       ),
     );
   }
@@ -156,19 +156,19 @@ class _HomeScreenState extends State<HomeScreen> {
         backgroundColor: const Color(0xFF090E13),
         elevation: 0,
         automaticallyImplyLeading: false,
-        toolbarHeight: 58,
+        toolbarHeight: 76,
         title: FittedBox(
           fit: BoxFit.scaleDown,
           alignment: Alignment.centerLeft,
           child: SvgPicture.asset(
-            'assets/logo/ktsentinel_logo.svg',
-            width: 220,
-            height: 28,
+            'assets/logo/sentinelhub_logo.svg',
+            width: 280,
+            height: 46,
             semanticsLabel: 'kTsentinel logo',
           ),
         ),
         actions: [
-          const SizedBox(width: 8),
+          const SizedBox(width: 10),
           _headerAction(Icons.videocam_rounded, 'Módulos e câmeras', () => _openModules(initialTab: 0)),
           _headerAction(Icons.memory_rounded, 'Config. ESP32', () => _openModules(initialTab: 1)),
           _headerAction(Icons.system_update_alt_rounded, 'Atualizações', () {
@@ -176,7 +176,7 @@ class _HomeScreenState extends State<HomeScreen> {
               MaterialPageRoute(builder: (_) => const UpdateScreen()),
             );
           }),
-          const SizedBox(width: 8),
+          const SizedBox(width: 10),
           AnimatedBuilder(
             animation: AlertHistoryService.instance,
             builder: (context, _) {
@@ -184,26 +184,27 @@ class _HomeScreenState extends State<HomeScreen> {
               return IconButton(
                 onPressed: _openAlertLog,
                 tooltip: 'Log de notificações',
+                iconSize: 26,
                 icon: Stack(
                   clipBehavior: Clip.none,
                   children: [
                     const Icon(Icons.notifications_rounded, color: AppConfig.accentColor),
                     if (count > 0)
                       Positioned(
-                        right: -4,
-                        top: -4,
+                        right: -3,
+                        top: -3,
                         child: Container(
-                          padding: const EdgeInsets.all(4),
+                          padding: const EdgeInsets.all(4.5),
                           decoration: const BoxDecoration(
                             color: AppConfig.alertColor,
                             shape: BoxShape.circle,
                           ),
-                          constraints: const BoxConstraints(minWidth: 14, minHeight: 14),
+                          constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
                           child: Text(
                             count > 9 ? '9+' : '$count',
                             style: const TextStyle(
                               color: Colors.white,
-                              fontSize: 9,
+                              fontSize: 10,
                               fontWeight: FontWeight.w700,
                             ),
                             textAlign: TextAlign.center,
@@ -215,7 +216,7 @@ class _HomeScreenState extends State<HomeScreen> {
               );
             },
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 14),
         ],
       ),
       body: SafeArea(
@@ -373,7 +374,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         final camera = cameras[index];
 
                         return Container(
-                          decoration: BoxDecoration(
+                          decoration: const BoxDecoration(
                             color: Colors.transparent,
                           ),
                           child: CameraStreamTile(camera: camera),
