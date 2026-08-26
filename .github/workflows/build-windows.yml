@@ -26,6 +26,14 @@ jobs:
     - name: Enable Desktop Support
       run: flutter config --enable-windows-desktop
 
+    - name: Injetar versão da Tag no pubspec
+      run: |
+        $TagName = "${{ github.ref_name }}"
+        $VersionNumber = $TagName.TrimStart('v')
+        
+        # Substitui a linha no arquivo usando PowerShell
+        (Get-Content pubspec.yaml) -replace '^version: .*', "version: $VersionNumber+1" | Set-Content pubspec.yaml
+        
     - name: Build Windows
       run: flutter build windows --release
 
