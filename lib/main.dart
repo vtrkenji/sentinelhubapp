@@ -200,8 +200,7 @@ class _SentinelAppState extends State<SentinelApp> {
   @override
   void initState() {
     super.initState();
-    _startBackgroundService();
-    _requestNotificationPermission();
+    _iniciarServicosComSeguranca();
     // Start native websocket-based ntfy listener for in-app notifications
     Future.microtask(() async {
       try {
@@ -210,6 +209,14 @@ class _SentinelAppState extends State<SentinelApp> {
         debugPrint('Falha ao iniciar NtfyNativeService: $e');
       }
     });
+  }
+
+  // Garante que a permissão de notificação seja concedida ANTES de iniciar o
+  // foreground service, evitando o crash do Android 13+ ao exibir a
+  // notificação obrigatória do serviço sem permissão ainda concedida.
+  Future<void> _iniciarServicosComSeguranca() async {
+    await _requestNotificationPermission();
+    _startBackgroundService();
   }
 
   void _startBackgroundService() {
@@ -226,7 +233,7 @@ class _SentinelAppState extends State<SentinelApp> {
     }
   }
 
-    void _requestNotificationPermission() async {
+  Future<void> _requestNotificationPermission() async {
     if (!Platform.isAndroid) return;
     final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
       FlutterLocalNotificationsPlugin();
@@ -235,7 +242,7 @@ class _SentinelAppState extends State<SentinelApp> {
       .resolvePlatformSpecificImplementation<
         AndroidFlutterLocalNotificationsPlugin>()
       ?.requestNotificationsPermission();
-    }
+  }
 
   @override
   Widget build(BuildContext context) {

@@ -48,3 +48,4 @@ build/
 .vagrant/
 *.symbols
 app.*.map.json
+*.jks

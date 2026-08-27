@@ -30,6 +30,15 @@ jobs:
 
     - name: Enable Desktop Support
       run: flutter config --enable-linux-desktop
+      
+    - name: Injetar versão da Tag no pubspec
+      run: |
+        # Pega a tag (ex: v1.0.8) e tira a letra 'v'
+        TAG_NAME=${{ github.ref_name }}
+        VERSION_NUMBER=${TAG_NAME#v}
+        
+        # Substitui a linha "version:" do pubspec.yaml
+        sed -i "s/^version: .*/version: $VERSION_NUMBER+1/g" pubspec.yaml
 
     - name: Build Linux
       run: flutter build linux --release
