@@ -133,6 +133,7 @@ Future<void> inicializarServicoSegundoPlano() async {
       onStart: onStartBackground,
       autoStart: true,
       isForegroundMode: true, // Garante que o Android não feche o app
+      foregroundServiceTypes: [AndroidForegroundType.dataSync],
       notificationChannelId: 'vsguard_os_foreground',
       initialNotificationTitle: 'kTsentinel',
       initialNotificationContent: 'kTsentinel monitoramento ativo...',
