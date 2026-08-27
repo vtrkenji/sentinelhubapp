@@ -28,6 +28,25 @@ jobs:
 
     - name: Install dependencies
       run: flutter pub get
+      
+    - name: Injetar versão da Tag no pubspec
+      run: |
+        # Pega a tag (ex: v1.0.8) e tira a letra 'v'
+        TAG_NAME=${{ github.ref_name }}
+        VERSION_NUMBER=${TAG_NAME#v}
+        
+        # Substitui a linha "version:" do pubspec.yaml
+        sed -i "s/^version: .*/version: $VERSION_NUMBER+1/g" pubspec.yaml
+
+    - name: Configurar assinatura de release (mesma keystore em toda build)
+      run: |
+        echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > android/app/upload-keystore.jks
+        cat > android/key.properties <<EOF
+        storeFile=upload-keystore.jks
+        storePassword=${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+        keyAlias=${{ secrets.ANDROID_KEY_ALIAS }}
+        keyPassword=${{ secrets.ANDROID_KEY_PASSWORD }}
+        EOF
 
     - name: Build APK
       run: flutter build apk --release
