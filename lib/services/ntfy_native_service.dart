@@ -15,6 +15,14 @@ class NtfyNativeService {
   final FlutterLocalNotificationsPlugin _localNotifications = FlutterLocalNotificationsPlugin();
 
   Future<void> start() async {
+    final settingsService = SettingsService();
+    final backgroundEnabled = await settingsService.loadBackgroundAtivo();
+    if (!backgroundEnabled) {
+      debugPrint('[NtfyWS] Listener in-app desativado pelo usuário.');
+      stop();
+      return;
+    }
+
     // 1. Inicialização segura para Mobile e Desktop (Linux/Windows)
     const androidInit = AndroidInitializationSettings('@mipmap/ic_launcher');
     const linuxInit = LinuxInitializationSettings(defaultActionName: 'Abrir');
@@ -27,7 +35,6 @@ class NtfyNativeService {
     await _localNotifications.initialize(initSettings);
 
     // 2. Load dynamic topic from SettingsService
-    final settingsService = SettingsService();
     String topic = await settingsService.loadNtfyTopic();
     if (topic.isEmpty) {
       topic = 'sentinel_vitor_01';
@@ -117,5 +124,6 @@ class NtfyNativeService {
 
   void stop() {
     _channel?.sink.close();
+    _channel = null;
   }
 }

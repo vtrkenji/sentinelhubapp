@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../services/settings_service.dart';
 import '../services/ntfy_native_service.dart';
 import '../config/app_config.dart';

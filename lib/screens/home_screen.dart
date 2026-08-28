@@ -1,10 +1,15 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
+import 'package:flutter_background_service/flutter_background_service.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
 import '../config/app_config.dart';
 import '../models/camera.dart';
 import '../services/alert_history_service.dart';
 import '../services/camera_service.dart';
+import '../services/ntfy_native_service.dart';
+import '../services/settings_service.dart';
 import 'home/camera_stream_tile.dart';
 import 'modules_and_cameras_screen.dart';
 import 'update_screen.dart';
@@ -18,11 +23,59 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   late Future<List<Camera>> _camerasFuture;
+  bool _monitoramentoAtivo = false;
 
   @override
   void initState() {
     super.initState();
     _loadCameras();
+    _loadMonitoramentoState();
+  }
+
+  Future<void> _loadMonitoramentoState() async {
+    final ativo = await SettingsService().loadBackgroundAtivo();
+    if (!mounted) return;
+    setState(() {
+      _monitoramentoAtivo = ativo;
+    });
+  }
+
+  Future<void> _toggleMonitoramento() async {
+    if (!Platform.isAndroid && !Platform.isIOS) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Monitoramento em background disponível apenas no Android.'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
+    final nextValue = !_monitoramentoAtivo;
+    final settingsService = SettingsService();
+    await settingsService.saveBackgroundAtivo(nextValue);
+
+    final service = FlutterBackgroundService();
+    final isRunning = await service.isRunning();
+
+    if (nextValue) {
+      if (!isRunning) {
+        await service.startService();
+      }
+      NtfyNativeService.instance.stop();
+      await NtfyNativeService.instance.start();
+    } else {
+      if (isRunning) {
+        service.invoke('stopService');
+      }
+      NtfyNativeService.instance.stop();
+    }
+
+    if (!mounted) return;
+    setState(() {
+      _monitoramentoAtivo = nextValue;
+    });
   }
 
   void _loadCameras() {
@@ -189,6 +242,49 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
         actions: [
           const SizedBox(width: 10),
+          Container(
+            margin: const EdgeInsets.only(right: 6),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(14),
+              color: _monitoramentoAtivo
+                  ? AppConfig.accentColor.withAlpha(28)
+                  : const Color(0xFF1A2328),
+              border: Border.all(
+                color: _monitoramentoAtivo
+                    ? AppConfig.accentColor.withAlpha(150)
+                    : const Color(0xFF2B3940),
+              ),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  _monitoramentoAtivo ? 'Ativo' : 'Inativo',
+                  style: TextStyle(
+                    color: _monitoramentoAtivo ? AppConfig.accentColor : AppConfig.mutedTextColor,
+                    fontSize: 10,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Transform.scale(
+                  scale: 0.82,
+                  child: Switch.adaptive(
+                    value: _monitoramentoAtivo,
+                    activeTrackColor: AppConfig.accentColor.withAlpha(180),
+                    activeThumbColor: AppConfig.accentColor,
+                    inactiveTrackColor: const Color(0xFF2E3A40),
+                    inactiveThumbColor: const Color(0xFFC9D6D9),
+                    onChanged: (Platform.isAndroid || Platform.isIOS)
+                        ? (_) => _toggleMonitoramento()
+                        : null,
+                  ),
+                ),
+              ],
+            ),
+          ),
           AnimatedBuilder(
             animation: AlertHistoryService.instance,
             builder: (context, _) {

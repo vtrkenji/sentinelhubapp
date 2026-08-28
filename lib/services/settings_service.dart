@@ -12,6 +12,7 @@ class SettingsService {
   static const String webhookEnabledKey = 'webhook_enabled';
   static const String webhookPortKey = 'webhook_port';
   static const String ntfyTopicKey = 'ntfy_topic';
+  static const String backgroundAtivoKey = 'background_ativo';
 
   Future<void> saveEsp32Ip(String ip) async {
     final prefs = await SharedPreferences.getInstance();
@@ -123,5 +124,15 @@ class SettingsService {
   Future<String> loadNtfyTopic() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getString(ntfyTopicKey) ?? prefs.getString(esp32TopicKey) ?? '';
+  }
+
+  Future<void> saveBackgroundAtivo(bool ativo) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(backgroundAtivoKey, ativo);
+  }
+
+  Future<bool> loadBackgroundAtivo() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(backgroundAtivoKey) ?? false;
   }
 }
