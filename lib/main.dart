@@ -1,12 +1,14 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:http/http.dart' as http;
-import 'package:media_kit/media_kit.dart';
 import 'package:flutter_background_service/flutter_background_service.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:http/http.dart' as http;
+import 'package:media_kit/media_kit.dart';
+import 'package:web_socket_channel/web_socket_channel.dart';
 
 import 'config/app_config.dart';
 import 'screens/home_screen.dart';
@@ -16,108 +18,248 @@ import 'services/app_globals.dart';
 
 // Global keys are provided by services/app_globals.dart
 
-// ============================================================================
-// SERVIÇO EM SEGUNDO PLANO (Nativo usando http e stream)
-// ============================================================================
-@pragma('vm:entry-point')
-void onStartBackground(ServiceInstance service) async {
-    WidgetsFlutterBinding.ensureInitialized();
+const List<int> _backgroundBackoffSeconds = <int>[5, 10, 30];
+Timer? _backgroundReconnectTimer;
+int _backgroundReconnectAttempt = 0;
 
-    // Inicializa o plugin de Notificações Locais
-    final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
-      FlutterLocalNotificationsPlugin();
+FlutterLocalNotificationsPlugin _createLocalNotificationsPlugin() =>
+    FlutterLocalNotificationsPlugin();
 
-    const AndroidInitializationSettings initializationSettingsAndroid =
+Future<void> _initializeForegroundNotifications(
+  FlutterLocalNotificationsPlugin plugin,
+) async {
+  const AndroidInitializationSettings initializationSettingsAndroid =
       AndroidInitializationSettings('@mipmap/ic_launcher');
-    final LinuxInitializationSettings linuxInitializationSettings =
-      const LinuxInitializationSettings(defaultActionName: 'Abrir');
+  const LinuxInitializationSettings linuxInitializationSettings =
+      LinuxInitializationSettings(defaultActionName: 'Abrir');
 
-    final InitializationSettings initializationSettings = InitializationSettings(
+  final InitializationSettings initializationSettings = InitializationSettings(
     android: initializationSettingsAndroid,
     linux: linuxInitializationSettings,
-    );
+  );
 
-    await flutterLocalNotificationsPlugin.initialize(initializationSettings);
+  await plugin.initialize(initializationSettings);
+}
 
-  final settingsService = SettingsService();
-  String topicoSecreto = AppConfig.ntfyTopic;
-  try {
-    final configuredTopic = await settingsService.loadNtfyTopic();
-    if (configuredTopic.trim().isNotEmpty) {
-      topicoSecreto = configuredTopic.trim();
-    }
-  } catch (_) {
-    debugPrint('[Sentinel Background] Falha ao carregar tópico ntfy local, usando padrão.');
+void _showNtfyNotification(
+  FlutterLocalNotificationsPlugin plugin,
+  String title,
+  String body,
+) {
+  plugin.show(
+    DateTime.now().millisecondsSinceEpoch ~/ 1000,
+    title,
+    body,
+    const NotificationDetails(
+      android: AndroidNotificationDetails(
+        'alertas_seguranca',
+        'Alertas de Intrusão',
+        importance: Importance.max,
+        priority: Priority.high,
+        playSound: true,
+        enableVibration: true,
+      ),
+    ),
+  );
+}
+
+void _scheduleReconnect(
+  Future<void> Function() connect,
+  String context,
+) {
+  if (_backgroundReconnectTimer?.isActive ?? false) {
+    return;
   }
 
-  final String urlStream = '${AppConfig.ntfyBaseUrl}/$topicoSecreto/json';
+  final delaySeconds = _backgroundBackoffSeconds[
+      _backgroundReconnectAttempt.clamp(0, _backgroundBackoffSeconds.length - 1)];
 
-debugPrint('[kTsentinel Background] Conectando ao canal nativo: $urlStream');
+  _backgroundReconnectAttempt = (_backgroundReconnectAttempt + 1)
+      .clamp(0, _backgroundBackoffSeconds.length);
 
+  debugPrint('[kTsentinel Background] $context - retry em ${delaySeconds}s');
+  _backgroundReconnectTimer = Timer(Duration(seconds: delaySeconds), () async {
+    try {
+      await connect();
+    } catch (e, stackTrace) {
+      debugPrint('[kTsentinel Background] Reconexão falhou: $e\n$stackTrace');
+      _scheduleReconnect(connect, context);
+    }
+  });
+}
+
+void _resetReconnectBackoff() {
+  _backgroundReconnectAttempt = 0;
+  _backgroundReconnectTimer?.cancel();
+  _backgroundReconnectTimer = null;
+}
+
+Future<void> _connectNtfyWebSocket(
+  FlutterLocalNotificationsPlugin plugin,
+  String topic,
+  ServiceInstance service,
+) async {
+  final String wsUrl = 'wss://ntfy.sh/$topic/ws';
+  debugPrint('[kTsentinel Background] Conectando via WebSocket: $wsUrl');
+
+  final channel = WebSocketChannel.connect(Uri.parse(wsUrl));
+
+  channel.stream.listen(
+    (dynamic message) {
+      try {
+        final payload = jsonDecode(message as String);
+        final event = payload['event'];
+        if (event != 'message') {
+          return;
+        }
+
+        final mensagemRecebida = payload['message'] ?? 'Campainha acionada!';
+        final tituloRecebido = payload['title'] ?? 'Alerta kTsentinel';
+
+        debugPrint('[kTsentinel Background] Alerta capturado: $mensagemRecebida');
+        _showNtfyNotification(plugin, tituloRecebido, mensagemRecebida);
+        _resetReconnectBackoff();
+      } catch (e) {
+        debugPrint('[kTsentinel Background] JSON inválido via WebSocket: $e');
+      }
+    },
+    onError: (Object error, StackTrace stackTrace) {
+      debugPrint('[kTsentinel Background] WebSocket falhou: $error');
+      channel.sink.close();
+      _scheduleReconnect(
+        () => _connectNtfyWebSocket(plugin, topic, service),
+        'WebSocket',
+      );
+    },
+    onDone: () {
+      debugPrint('[kTsentinel Background] WebSocket encerrado pelo servidor.');
+      _scheduleReconnect(
+        () => _connectNtfyWebSocket(plugin, topic, service),
+        'WebSocket',
+      );
+    },
+  );
+}
+
+Future<void> _connectNtfyHttpStream(
+  FlutterLocalNotificationsPlugin plugin,
+  String topic,
+  ServiceInstance service,
+) async {
+  final String urlStream = '${AppConfig.ntfyBaseUrl}/$topic/json';
+  debugPrint('[kTsentinel Background] Conectando via HTTP stream: $urlStream');
+
+  final client = http.Client();
   try {
-    final client = http.Client();
     final request = http.Request('GET', Uri.parse(urlStream));
-    
-    // Abre a conexão e DEIXA ABERTA (Streaming)
     final response = await client.send(request);
-    
+
     response.stream
         .transform(utf8.decoder)
         .transform(const LineSplitter())
-        .listen((String line) {
-          
-      // Ignora pings vazios que o servidor manda para manter a rede viva
-      if (line.trim().isEmpty) return; 
-      
-      try {
-        final payload = jsonDecode(line);
-        
-        // Se for uma mensagem real disparada pelo seu ESP32
-        if (payload['event'] == 'message') {
-          final String mensagemRecebida = payload['message'] ?? 'Campainha acionada!';
-          final String tituloRecebido = payload['title'] ?? 'Alerta kTsentinel';
-
-          debugPrint("[kTsentinel Background] Alerta Capturado: $mensagemRecebida");
-
-          // Dispara a Notificação Push na tela do telemóvel
-          flutterLocalNotificationsPlugin.show(
-            DateTime.now().millisecond, 
-            tituloRecebido,
-            mensagemRecebida,
-            const NotificationDetails(
-              android: AndroidNotificationDetails(
-                'alertas_seguranca', 
-                'Alertas de Intrusão',
-                importance: Importance.max,
-                priority: Priority.high,
-                playSound: true,
-                enableVibration: true,
-              ),
-            ),
-          );
+        .listen(
+      (String line) {
+        if (line.trim().isEmpty) {
+          return;
         }
-      } catch (e) {
-        debugPrint("[Sentinel Background] Erro ao ler pacote JSON: $e");
-      }
-    });
+
+        try {
+          final payload = jsonDecode(line);
+          if (payload['event'] != 'message') {
+            return;
+          }
+
+          final mensagemRecebida = payload['message'] ?? 'Campainha acionada!';
+          final tituloRecebido = payload['title'] ?? 'Alerta kTsentinel';
+
+          debugPrint('[kTsentinel Background] Alerta capturado: $mensagemRecebida');
+          _showNtfyNotification(plugin, tituloRecebido, mensagemRecebida);
+          _resetReconnectBackoff();
+        } catch (e) {
+          debugPrint('[kTsentinel Background] JSON inválido via HTTP stream: $e');
+        }
+      },
+      onError: (Object error, StackTrace stackTrace) {
+        debugPrint('[kTsentinel Background] HTTP stream falhou: $error');
+        client.close();
+        _scheduleReconnect(
+          () => _connectNtfyHttpStream(plugin, topic, service),
+          'HTTP',
+        );
+      },
+      onDone: () {
+        debugPrint('[kTsentinel Background] HTTP stream finalizado.');
+        client.close();
+        _scheduleReconnect(
+          () => _connectNtfyHttpStream(plugin, topic, service),
+          'HTTP',
+        );
+      },
+    );
   } catch (e) {
-    debugPrint("[Sentinel Background] Erro crítico de conexão da rede: $e");
+    client.close();
+    debugPrint('[kTsentinel Background] Erro crítico de rede: $e');
+    _scheduleReconnect(
+      () => _connectNtfyHttpStream(plugin, topic, service),
+      'HTTP',
+    );
   }
 }
 
-// ============================================================================
-// INICIALIZADOR DO FOREGROUND SERVICE
-// ============================================================================
-Future<void> inicializarServicoSegundoPlano() async {
-  // CRIAÇÃO DO CANAL DE NOTIFICAÇÃO OBRIGATÓRIO PARA O ANDROID
+Future<void> _startNtfyListener(
+  FlutterLocalNotificationsPlugin plugin,
+  SettingsService settingsService,
+  ServiceInstance service,
+) async {
+  final topic = (await settingsService.loadNtfyTopic()).trim();
+  final resolvedTopic = topic.isNotEmpty ? topic : AppConfig.ntfyTopic;
+
+  debugPrint('[kTsentinel Background] Iniciando listener para tópico: $resolvedTopic');
+
+  try {
+    await _connectNtfyWebSocket(plugin, resolvedTopic, service);
+  } catch (e, stackTrace) {
+    debugPrint('[kTsentinel Background] WebSocket indisponível, indo para HTTP fallback: $e\n$stackTrace');
+    await _connectNtfyHttpStream(plugin, resolvedTopic, service);
+  }
+}
+
+@pragma('vm:entry-point')
+Future<void> onStartBackground(ServiceInstance service) async {
+  WidgetsFlutterBinding.ensureInitialized();
+
   final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
-      FlutterLocalNotificationsPlugin();
+      _createLocalNotificationsPlugin();
+  await _initializeForegroundNotifications(flutterLocalNotificationsPlugin);
+
+  final settingsService = SettingsService();
+  final backgroundAtivo = await settingsService.loadBackgroundAtivo();
+
+  if (!backgroundAtivo) {
+    debugPrint('[kTsentinel Background] Serviço bloqueado por background_ativo=false');
+    await service.stopSelf();
+    return;
+  }
+
+  service.on('stopService').listen((event) async {
+    debugPrint('[kTsentinel Background] Evento stopService recebido.');
+    _backgroundReconnectTimer?.cancel();
+    _backgroundReconnectTimer = null;
+    await service.stopSelf();
+  });
+
+  await _startNtfyListener(flutterLocalNotificationsPlugin, settingsService, service);
+}
+
+Future<void> inicializarServicoSegundoPlano() async {
+  final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
+      _createLocalNotificationsPlugin();
 
   const AndroidNotificationChannel channel = AndroidNotificationChannel(
-    'vsguard_os_foreground', // Tem que ser EXATAMENTE igual ao notificationChannelId abaixo
+    'vsguard_os_foreground',
     'VSGuard Service Channel',
     description: 'Canal usado para manter o serviço de escuta ativo no Android.',
-    importance: Importance.low, // Low para não fazer barulho/vibrar toda hora
+    importance: Importance.low,
   );
 
   await flutterLocalNotificationsPlugin
@@ -125,22 +267,41 @@ Future<void> inicializarServicoSegundoPlano() async {
           AndroidFlutterLocalNotificationsPlugin>()
       ?.createNotificationChannel(channel);
 
-  // AGORA SIM INICIAMOS O SERVIÇO
   final service = FlutterBackgroundService();
-  
+
   await service.configure(
     androidConfiguration: AndroidConfiguration(
       onStart: onStartBackground,
-      autoStart: true,
-      isForegroundMode: true, // Garante que o Android não feche o app
+      autoStart: false,
+      isForegroundMode: true,
       foregroundServiceTypes: [AndroidForegroundType.dataSync],
       notificationChannelId: 'vsguard_os_foreground',
       initialNotificationTitle: 'kTsentinel',
       initialNotificationContent: 'kTsentinel monitoramento ativo...',
       foregroundServiceNotificationId: 888,
     ),
-    iosConfiguration: IosConfiguration(), 
+    iosConfiguration: IosConfiguration(),
   );
+}
+
+Future<void> toggleBackgroundService({required bool enabled}) async {
+  final settingsService = SettingsService();
+  await settingsService.saveBackgroundAtivo(enabled);
+
+  final service = FlutterBackgroundService();
+  final isRunning = await service.isRunning();
+
+  if (enabled) {
+    await inicializarServicoSegundoPlano();
+    if (!isRunning) {
+      await service.startService();
+    }
+    return;
+  }
+
+  if (isRunning) {
+    service.invoke('stopService');
+  }
 }
 
 // ============================================================================
@@ -205,7 +366,10 @@ class _SentinelAppState extends State<SentinelApp> {
     // Start native websocket-based ntfy listener for in-app notifications
     Future.microtask(() async {
       try {
-        await NtfyNativeService.instance.start();
+        final backgroundAtivo = await SettingsService().loadBackgroundAtivo();
+        if (backgroundAtivo) {
+          await NtfyNativeService.instance.start();
+        }
       } catch (e) {
         debugPrint('Falha ao iniciar NtfyNativeService: $e');
       }
@@ -216,6 +380,13 @@ class _SentinelAppState extends State<SentinelApp> {
   // foreground service, evitando o crash do Android 13+ ao exibir a
   // notificação obrigatória do serviço sem permissão ainda concedida.
   Future<void> _iniciarServicosComSeguranca() async {
+    final settingsService = SettingsService();
+    final backgroundAtivo = await settingsService.loadBackgroundAtivo();
+    if (!backgroundAtivo) {
+      debugPrint('[kTsentinel] Serviço em segundo plano desativado pelo usuário.');
+      return;
+    }
+
     await _requestNotificationPermission();
     _startBackgroundService();
   }
