@@ -1,26 +1,35 @@
 import 'dart:async';
-import 'dart:convert';
 import 'dart:io';
 
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_background_service/flutter_background_service.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-import 'package:http/http.dart' as http;
 import 'package:media_kit/media_kit.dart';
-import 'package:web_socket_channel/web_socket_channel.dart';
 
 import 'config/app_config.dart';
+import 'firebase_options.dart';
 import 'screens/home_screen.dart';
-import 'services/settings_service.dart';
-import 'services/ntfy_native_service.dart';
 import 'services/app_globals.dart';
 
 // Global keys are provided by services/app_globals.dart
 
-const List<int> _backgroundBackoffSeconds = <int>[5, 10, 30];
-Timer? _backgroundReconnectTimer;
-int _backgroundReconnectAttempt = 0;
+// FCM global state
+const String _fcmTopicName = 'campainha';
+const String _androidNotificationChannelId = 'campainha_alertas';
+const String _androidNotificationChannelName = 'Campainha';
+
+late FlutterLocalNotificationsPlugin _fcmNotificationsPlugin;
+
+const AndroidNotificationChannel _highPriorityChannel = AndroidNotificationChannel(
+  _androidNotificationChannelId,
+  _androidNotificationChannelName,
+  description: 'Alertas de campainha e segurança do aplicativo kTsentinel.',
+  importance: Importance.max,
+  playSound: true,
+  enableVibration: true,
+);
 
 FlutterLocalNotificationsPlugin _createLocalNotificationsPlugin() =>
     FlutterLocalNotificationsPlugin();
@@ -30,15 +39,21 @@ Future<void> _initializeForegroundNotifications(
 ) async {
   const AndroidInitializationSettings initializationSettingsAndroid =
       AndroidInitializationSettings('@mipmap/ic_launcher');
-  const LinuxInitializationSettings linuxInitializationSettings =
-      LinuxInitializationSettings(defaultActionName: 'Abrir');
 
   final InitializationSettings initializationSettings = InitializationSettings(
     android: initializationSettingsAndroid,
-    linux: linuxInitializationSettings,
   );
 
-  await plugin.initialize(initializationSettings);
+  await plugin.initialize(
+    initializationSettings,
+    onDidReceiveNotificationResponse: (NotificationResponse response) {
+      debugPrint('[kTsentinel FCM] Notificação tocada: ${response.payload ?? "sem payload"}');
+    },
+  );
+
+  final androidPlugin =
+      plugin.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
+  await androidPlugin?.createNotificationChannel(_highPriorityChannel);
 }
 
 void _showNtfyNotification(
@@ -50,259 +65,70 @@ void _showNtfyNotification(
     DateTime.now().millisecondsSinceEpoch ~/ 1000,
     title,
     body,
-    const NotificationDetails(
+    NotificationDetails(
       android: AndroidNotificationDetails(
-        'alertas_seguranca',
-        'Alertas de Intrusão',
+        _androidNotificationChannelId,
+        _androidNotificationChannelName,
+        channelDescription: _highPriorityChannel.description,
         importance: Importance.max,
         priority: Priority.high,
         playSound: true,
         enableVibration: true,
+        ticker: 'Campainha kTsentinel',
       ),
     ),
+    payload: 'campainha',
   );
 }
 
-void _scheduleReconnect(
-  Future<void> Function() connect,
-  String context,
-) {
-  if (_backgroundReconnectTimer?.isActive ?? false) {
+// ============================================================================
+// FIREBASE CLOUD MESSAGING (FCM) INITIALIZATION AND HANDLERS
+// ============================================================================
+
+Future<void> _initializeFirebaseForAndroid() async {
+  if (!Platform.isAndroid) {
+    debugPrint('[kTsentinel FCM] Plataforma não Android: Firebase FCM desativado.');
     return;
   }
 
-  final delaySeconds = _backgroundBackoffSeconds[
-      _backgroundReconnectAttempt.clamp(0, _backgroundBackoffSeconds.length - 1)];
-
-  _backgroundReconnectAttempt = (_backgroundReconnectAttempt + 1)
-      .clamp(0, _backgroundBackoffSeconds.length);
-
-  debugPrint('[kTsentinel Background] $context - retry em ${delaySeconds}s');
-  _backgroundReconnectTimer = Timer(Duration(seconds: delaySeconds), () async {
-    try {
-      await connect();
-    } catch (e, stackTrace) {
-      debugPrint('[kTsentinel Background] Reconexão falhou: $e\n$stackTrace');
-      _scheduleReconnect(connect, context);
-    }
-  });
-}
-
-void _resetReconnectBackoff() {
-  _backgroundReconnectAttempt = 0;
-  _backgroundReconnectTimer?.cancel();
-  _backgroundReconnectTimer = null;
-}
-
-Future<void> _connectNtfyWebSocket(
-  FlutterLocalNotificationsPlugin plugin,
-  String topic,
-  ServiceInstance service,
-) async {
-  final String wsUrl = 'wss://ntfy.sh/$topic/ws';
-  debugPrint('[kTsentinel Background] Conectando via WebSocket: $wsUrl');
-
-  final channel = WebSocketChannel.connect(Uri.parse(wsUrl));
-
-  channel.stream.listen(
-    (dynamic message) {
-      try {
-        final payload = jsonDecode(message as String);
-        final event = payload['event'];
-        if (event != 'message') {
-          return;
-        }
-
-        final mensagemRecebida = payload['message'] ?? 'Campainha acionada!';
-        final tituloRecebido = payload['title'] ?? 'Alerta kTsentinel';
-
-        debugPrint('[kTsentinel Background] Alerta capturado: $mensagemRecebida');
-        _showNtfyNotification(plugin, tituloRecebido, mensagemRecebida);
-        _resetReconnectBackoff();
-      } catch (e) {
-        debugPrint('[kTsentinel Background] JSON inválido via WebSocket: $e');
-      }
-    },
-    onError: (Object error, StackTrace stackTrace) {
-      debugPrint('[kTsentinel Background] WebSocket falhou: $error');
-      channel.sink.close();
-      _scheduleReconnect(
-        () => _connectNtfyWebSocket(plugin, topic, service),
-        'WebSocket',
-      );
-    },
-    onDone: () {
-      debugPrint('[kTsentinel Background] WebSocket encerrado pelo servidor.');
-      _scheduleReconnect(
-        () => _connectNtfyWebSocket(plugin, topic, service),
-        'WebSocket',
-      );
-    },
-  );
-}
-
-Future<void> _connectNtfyHttpStream(
-  FlutterLocalNotificationsPlugin plugin,
-  String topic,
-  ServiceInstance service,
-) async {
-  final String urlStream = '${AppConfig.ntfyBaseUrl}/$topic/json';
-  debugPrint('[kTsentinel Background] Conectando via HTTP stream: $urlStream');
-
-  final client = http.Client();
   try {
-    final request = http.Request('GET', Uri.parse(urlStream));
-    final response = await client.send(request);
-
-    response.stream
-        .transform(utf8.decoder)
-        .transform(const LineSplitter())
-        .listen(
-      (String line) {
-        if (line.trim().isEmpty) {
-          return;
-        }
-
-        try {
-          final payload = jsonDecode(line);
-          if (payload['event'] != 'message') {
-            return;
-          }
-
-          final mensagemRecebida = payload['message'] ?? 'Campainha acionada!';
-          final tituloRecebido = payload['title'] ?? 'Alerta kTsentinel';
-
-          debugPrint('[kTsentinel Background] Alerta capturado: $mensagemRecebida');
-          _showNtfyNotification(plugin, tituloRecebido, mensagemRecebida);
-          _resetReconnectBackoff();
-        } catch (e) {
-          debugPrint('[kTsentinel Background] JSON inválido via HTTP stream: $e');
-        }
-      },
-      onError: (Object error, StackTrace stackTrace) {
-        debugPrint('[kTsentinel Background] HTTP stream falhou: $error');
-        client.close();
-        _scheduleReconnect(
-          () => _connectNtfyHttpStream(plugin, topic, service),
-          'HTTP',
-        );
-      },
-      onDone: () {
-        debugPrint('[kTsentinel Background] HTTP stream finalizado.');
-        client.close();
-        _scheduleReconnect(
-          () => _connectNtfyHttpStream(plugin, topic, service),
-          'HTTP',
-        );
-      },
-    );
-  } catch (e) {
-    client.close();
-    debugPrint('[kTsentinel Background] Erro crítico de rede: $e');
-    _scheduleReconnect(
-      () => _connectNtfyHttpStream(plugin, topic, service),
-      'HTTP',
-    );
-  }
-}
-
-Future<void> _startNtfyListener(
-  FlutterLocalNotificationsPlugin plugin,
-  SettingsService settingsService,
-  ServiceInstance service,
-) async {
-  final topic = (await settingsService.loadNtfyTopic()).trim();
-  final resolvedTopic = topic.isNotEmpty ? topic : AppConfig.ntfyTopic;
-
-  debugPrint('[kTsentinel Background] Iniciando listener para tópico: $resolvedTopic');
-
-  try {
-    await _connectNtfyWebSocket(plugin, resolvedTopic, service);
+    await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+    FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+    debugPrint('[kTsentinel FCM] Firebase inicializado com sucesso no Android.');
   } catch (e, stackTrace) {
-    debugPrint('[kTsentinel Background] WebSocket indisponível, indo para HTTP fallback: $e\n$stackTrace');
-    await _connectNtfyHttpStream(plugin, resolvedTopic, service);
+    debugPrint('[kTsentinel FCM] Erro ao inicializar Firebase no Android: $e\n$stackTrace');
   }
 }
 
+/// Background handler for FCM messages when app is closed or in background.
+/// This must be a top-level function as per Firebase Messaging documentation.
 @pragma('vm:entry-point')
-Future<void> onStartBackground(ServiceInstance service) async {
-  WidgetsFlutterBinding.ensureInitialized();
+Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+  debugPrint('[kTsentinel FCM] Mensagem recebida em segundo plano');
+  debugPrint('[kTsentinel FCM] Dados: ${message.data}');
+  debugPrint('[kTsentinel FCM] Título: ${message.notification?.title ?? message.data['title'] ?? 'sem título'}');
+  debugPrint('[kTsentinel FCM] Corpo: ${message.notification?.body ?? message.data['body'] ?? 'sem corpo'}');
 
-  final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
-      _createLocalNotificationsPlugin();
-  await _initializeForegroundNotifications(flutterLocalNotificationsPlugin);
+  try {
+    await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
-  final settingsService = SettingsService();
-  final backgroundAtivo = await settingsService.loadBackgroundAtivo();
+    final plugin = _createLocalNotificationsPlugin();
+    await _initializeForegroundNotifications(plugin);
 
-  if (!backgroundAtivo) {
-    debugPrint('[kTsentinel Background] Serviço bloqueado por background_ativo=false');
-    await service.stopSelf();
-    return;
-  }
-
-  service.on('stopService').listen((event) async {
-    debugPrint('[kTsentinel Background] Evento stopService recebido.');
-    _backgroundReconnectTimer?.cancel();
-    _backgroundReconnectTimer = null;
-    await service.stopSelf();
-  });
-
-  await _startNtfyListener(flutterLocalNotificationsPlugin, settingsService, service);
-}
-
-Future<void> inicializarServicoSegundoPlano() async {
-  final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
-      _createLocalNotificationsPlugin();
-
-  const AndroidNotificationChannel channel = AndroidNotificationChannel(
-    'vsguard_os_foreground',
-    'VSGuard Service Channel',
-    description: 'Canal usado para manter o serviço de escuta ativo no Android.',
-    importance: Importance.low,
-  );
-
-  await flutterLocalNotificationsPlugin
-      .resolvePlatformSpecificImplementation<
-          AndroidFlutterLocalNotificationsPlugin>()
-      ?.createNotificationChannel(channel);
-
-  final service = FlutterBackgroundService();
-
-  await service.configure(
-    androidConfiguration: AndroidConfiguration(
-      onStart: onStartBackground,
-      autoStart: false,
-      isForegroundMode: true,
-      foregroundServiceTypes: [AndroidForegroundType.dataSync],
-      notificationChannelId: 'vsguard_os_foreground',
-      initialNotificationTitle: 'kTsentinel',
-      initialNotificationContent: 'kTsentinel monitoramento ativo...',
-      foregroundServiceNotificationId: 888,
-    ),
-    iosConfiguration: IosConfiguration(),
-  );
-}
-
-Future<void> toggleBackgroundService({required bool enabled}) async {
-  final settingsService = SettingsService();
-  await settingsService.saveBackgroundAtivo(enabled);
-
-  final service = FlutterBackgroundService();
-  final isRunning = await service.isRunning();
-
-  if (enabled) {
-    await inicializarServicoSegundoPlano();
-    if (!isRunning) {
-      await service.startService();
-    }
-    return;
-  }
-
-  if (isRunning) {
-    service.invoke('stopService');
+    final title = message.notification?.title ??
+        message.data['title'] ??
+        'Alerta kTsentinel';
+    final body = message.notification?.body ??
+        message.data['body'] ??
+        'Campainha acionada!';
+    _showNtfyNotification(plugin, title, body);
+    debugPrint('[kTsentinel FCM] Notificação local exibida em segundo plano');
+  } catch (e, stackTrace) {
+    debugPrint('[kTsentinel FCM] Erro ao processar mensagem em segundo plano: $e\n$stackTrace');
   }
 }
+
+
 
 // ============================================================================
 // FUNÇÃO MAIN
@@ -312,6 +138,13 @@ void main() {
   runZonedGuarded<Future<void>>(() async {
     WidgetsFlutterBinding.ensureInitialized();
     MediaKit.ensureInitialized();
+
+    if (Platform.isAndroid) {
+      await _initializeFirebaseForAndroid();
+    } else {
+      debugPrint('[kTsentinel] Plataforma não Android: Firebase/FCM não inicializado.');
+    }
+
     await SystemChrome.setPreferredOrientations([
       DeviceOrientation.portraitUp,
       DeviceOrientation.portraitDown,
@@ -362,58 +195,94 @@ class _SentinelAppState extends State<SentinelApp> {
   @override
   void initState() {
     super.initState();
-    _iniciarServicosComSeguranca();
-    // Start native websocket-based ntfy listener for in-app notifications
-    Future.microtask(() async {
-      try {
-        final backgroundAtivo = await SettingsService().loadBackgroundAtivo();
-        if (backgroundAtivo) {
-          await NtfyNativeService.instance.start();
-        }
-      } catch (e) {
-        debugPrint('Falha ao iniciar NtfyNativeService: $e');
-      }
-    });
-  }
-
-  // Garante que a permissão de notificação seja concedida ANTES de iniciar o
-  // foreground service, evitando o crash do Android 13+ ao exibir a
-  // notificação obrigatória do serviço sem permissão ainda concedida.
-  Future<void> _iniciarServicosComSeguranca() async {
-    final settingsService = SettingsService();
-    final backgroundAtivo = await settingsService.loadBackgroundAtivo();
-    if (!backgroundAtivo) {
-      debugPrint('[kTsentinel] Serviço em segundo plano desativado pelo usuário.');
-      return;
+    if (Platform.isAndroid) {
+      _iniciarServicosComSeguranca();
+    } else {
+      debugPrint('[kTsentinel] Sistema operacional não Android: sem serviços de FCM.');
     }
-
-    await _requestNotificationPermission();
-    _startBackgroundService();
   }
 
-  void _startBackgroundService() {
-    if (Platform.isAndroid || Platform.isIOS) {
-      Future.microtask(() async {
+  Future<void> _iniciarServicosComSeguranca() async {
+    debugPrint('[kTsentinel FCM] Inicializando serviços de notificações do app.');
+    _fcmNotificationsPlugin = _createLocalNotificationsPlugin();
+    await _requestNotificationPermission();
+    await _initializeFCMService();
+  }
+
+  Future<void> _initializeFCMService() async {
+    try {
+      _fcmNotificationsPlugin = _createLocalNotificationsPlugin();
+      await _initializeForegroundNotifications(_fcmNotificationsPlugin);
+
+      debugPrint('[kTsentinel FCM] Inicializando Firebase Cloud Messaging...');
+
+      final settings = await FirebaseMessaging.instance.requestPermission(
+        alert: true,
+        announcement: false,
+        badge: true,
+        carPlay: false,
+        criticalAlert: false,
+        provisional: false,
+        sound: true,
+      );
+
+      final status = settings.authorizationStatus;
+      if (status == AuthorizationStatus.authorized ||
+          status == AuthorizationStatus.provisional) {
+        debugPrint('[kTsentinel FCM] Permissões de notificação concedidas');
+      } else {
+        debugPrint('[kTsentinel FCM] Permissões de notificação não concedidas. Status: $status');
+        return;
+      }
+
+      final token = await FirebaseMessaging.instance.getToken();
+      debugPrint('[kTsentinel FCM] Token FCM: $token');
+
+      FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+        debugPrint('[kTsentinel FCM] Mensagem recebida em primeiro plano');
+        debugPrint('[kTsentinel FCM] Título: ${message.notification?.title ?? message.data['title'] ?? 'sem título'}');
+        debugPrint('[kTsentinel FCM] Corpo: ${message.notification?.body ?? message.data['body'] ?? 'sem corpo'}');
+
         try {
-          await inicializarServicoSegundoPlano();
+          final title = message.notification?.title ??
+              message.data['title'] ??
+              'Alerta kTsentinel';
+          final body = message.notification?.body ??
+              message.data['body'] ??
+              'Campainha acionada!';
+          _showNtfyNotification(_fcmNotificationsPlugin, title, body);
         } catch (e, stackTrace) {
-          debugPrint('Falha ao iniciar serviço em segundo plano: $e\n$stackTrace');
+          debugPrint('[kTsentinel FCM] Erro ao processar mensagem em primeiro plano: $e\n$stackTrace');
         }
       });
-    } else {
-      debugPrint('Background service ignorado (não suportado no Desktop).');
+
+      FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
+        debugPrint('[kTsentinel FCM] Abertura via toque na notificação: ${message.data}');
+      });
+
+      final initialMessage = await FirebaseMessaging.instance.getInitialMessage();
+      if (initialMessage != null) {
+        debugPrint('[kTsentinel FCM] Notificação aberta ao iniciar o app: ${initialMessage.data}');
+      }
+
+      await FirebaseMessaging.instance.subscribeToTopic(_fcmTopicName);
+      debugPrint('[kTsentinel FCM] Inscrito no tópico "$_fcmTopicName"');
+    } catch (e, stackTrace) {
+      debugPrint('[kTsentinel FCM] Falha ao inicializar Firebase Cloud Messaging: $e\n$stackTrace');
     }
   }
 
   Future<void> _requestNotificationPermission() async {
     if (!Platform.isAndroid) return;
-    final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
-      FlutterLocalNotificationsPlugin();
 
-    await flutterLocalNotificationsPlugin
-      .resolvePlatformSpecificImplementation<
-        AndroidFlutterLocalNotificationsPlugin>()
-      ?.requestNotificationsPermission();
+    final androidPlugin =
+        _fcmNotificationsPlugin.resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin>();
+
+    if (androidPlugin != null) {
+      final granted = await androidPlugin.requestNotificationsPermission();
+      debugPrint('[kTsentinel FCM] Permissão de notificação do plugin local: $granted');
+    }
   }
 
   @override

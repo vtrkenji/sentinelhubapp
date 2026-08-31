@@ -1,13 +1,13 @@
 {
   "project_info": {
-    "project_number": "565916002310",
-    "project_id": "sentinel-hub-30eee",
-    "storage_bucket": "sentinel-hub-30eee.firebasestorage.app"
+    "project_number": "507640624956",
+    "project_id": "ktsentinel-aa307",
+    "storage_bucket": "ktsentinel-aa307.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:565916002310:android:360048e2b3a0b44b27bb87",
+        "mobilesdk_app_id": "1:507640624956:android:d76e727333834f9cb05039",
         "android_client_info": {
           "package_name": "com.example.sentinel_hub"
         }
@@ -15,7 +15,7 @@
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyA2oDYgTm5IkfseUQ9SqvHVLDAmixqvhxU"
+          "current_key": "AIzaSyCl6FbnSTGfU5k6GszcjUi8a-C4870U5Lk"
         }
       ],
       "services": {
