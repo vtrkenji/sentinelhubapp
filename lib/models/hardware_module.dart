@@ -7,7 +7,7 @@ extension ModuleTypeExtension on ModuleType {
   String get displayName {
     switch (this) {
       case ModuleType.wt32Eth01:
-        return 'Gateway WT32-ETH01';
+        return 'Gateway WT32-ETH01 (RF)';
       case ModuleType.gatewayEsp32C6Rf:
         return 'Gateway ESP32-C6 (RF)';
     }

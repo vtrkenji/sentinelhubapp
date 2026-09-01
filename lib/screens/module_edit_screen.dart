@@ -32,7 +32,10 @@ class _ModuleEditScreenState extends State<ModuleEditScreen> {
   final _esp32DiscoveryService = Esp32DiscoveryService();
   ModuleType _selectedModuleType = ModuleType.gatewayEsp32C6Rf;
 
-  bool _isEsp32C6RfGateway() => _selectedModuleType == ModuleType.gatewayEsp32C6Rf;
+  static const Map<String, ModuleType> _discoveryModuleTypes = {
+    'esp32c6-rf': ModuleType.gatewayEsp32C6Rf,
+    'wt32-eth01': ModuleType.wt32Eth01,
+  };
 
   @override
   void initState() {
@@ -84,7 +87,7 @@ class _ModuleEditScreenState extends State<ModuleEditScreen> {
       final results = (await _esp32DiscoveryService.discoverDevices(
         timeout: const Duration(seconds: 3),
       ))
-          .where((device) => device.moduleType == 'esp32c6-rf')
+          .where((device) => _discoveryModuleTypes.containsKey(device.moduleType))
           .toList();
       if (!mounted) return;
 
@@ -121,6 +124,10 @@ class _ModuleEditScreenState extends State<ModuleEditScreen> {
                       onTap: () {
                         setState(() {
                           _ipController.text = device.ip;
+                          final matchedType = _discoveryModuleTypes[device.moduleType];
+                          if (matchedType != null) {
+                            _selectedModuleType = matchedType;
+                          }
                         });
                         Navigator.of(context).pop();
                         ScaffoldMessenger.of(context).showSnackBar(
@@ -146,10 +153,6 @@ class _ModuleEditScreenState extends State<ModuleEditScreen> {
   }
 
   Future<void> _loadFromDevice() async {
-    if (!_isEsp32C6RfGateway()) {
-      return;
-    }
-
     final ip = _ipController.text.trim();
     if (ip.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Informe o IP do módulo para carregar.')));
@@ -174,19 +177,16 @@ class _ModuleEditScreenState extends State<ModuleEditScreen> {
     if (!_formKey.currentState!.validate()) return;
 
     try {
-      final specificSettings = <String, dynamic>{};
       final oldFcmTopic = widget.module?.specificSettings['fcmtopic'] as String? ?? '';
       final newFcmTopic = _fcmTopicController.text.trim();
 
-      if (_isEsp32C6RfGateway()) {
-        specificSettings['duckdom'] = _duckDomController.text.trim();
-        specificSettings['ducktok'] = _duckTokController.text.trim();
-        specificSettings['camp1'] = _camp1Controller.text.trim();
-        specificSettings['camp2'] = _camp2Controller.text.trim();
-        specificSettings['fcmtopic'] = newFcmTopic;
-      } else {
-        specificSettings['fcmtopic'] = newFcmTopic;
-      }
+      final specificSettings = <String, dynamic>{
+        'duckdom': _duckDomController.text.trim(),
+        'ducktok': _duckTokController.text.trim(),
+        'camp1': _camp1Controller.text.trim(),
+        'camp2': _camp2Controller.text.trim(),
+        'fcmtopic': newFcmTopic,
+      };
 
       final moduleData = HardwareModule(
         id: widget.module?.id ?? '',
@@ -196,22 +196,20 @@ class _ModuleEditScreenState extends State<ModuleEditScreen> {
         specificSettings: specificSettings,
       );
 
-      if (_isEsp32C6RfGateway()) {
-        final ip = _ipController.text.trim();
-        final posted = await _esp32Service.salvarConfiguracoes(
-          ip: ip,
-          duckdom: _duckDomController.text.trim(),
-          ducktok: _duckTokController.text.trim(),
-          camp1: _camp1Controller.text.trim(),
-          camp2: _camp2Controller.text.trim(),
-          fcmTopic: newFcmTopic,
-        );
+      final ip = _ipController.text.trim();
+      final posted = await _esp32Service.salvarConfiguracoes(
+        ip: ip,
+        duckdom: _duckDomController.text.trim(),
+        ducktok: _duckTokController.text.trim(),
+        camp1: _camp1Controller.text.trim(),
+        camp2: _camp2Controller.text.trim(),
+        fcmTopic: newFcmTopic,
+      );
 
-        if (!posted) {
-          if (!mounted) return;
-          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Falha ao salvar no ESP32. Verifique a conexão.'), backgroundColor: Colors.red));
-          return;
-        }
+      if (!posted) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Falha ao salvar no ESP32. Verifique a conexão.'), backgroundColor: Colors.red));
+        return;
       }
 
       if (widget.module == null) {
@@ -266,17 +264,15 @@ class _ModuleEditScreenState extends State<ModuleEditScreen> {
               TextFormField(controller: _nameController, decoration: const InputDecoration(labelText: 'Nome/Identificador do Módulo'), validator: _validateNotEmpty),
               const SizedBox(height: 16),
               TextFormField(controller: _ipController, decoration: const InputDecoration(labelText: 'Endereço IP'), validator: _validateIpAddress, keyboardType: TextInputType.number),
-              if (_isEsp32C6RfGateway()) ...[
-                const SizedBox(height: 8),
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: OutlinedButton.icon(
-                    onPressed: _loadFromDevice,
-                    icon: const Icon(Icons.sync),
-                    label: const Text('Carregar do ESP32'),
-                  ),
+              const SizedBox(height: 8),
+              Align(
+                alignment: Alignment.centerRight,
+                child: OutlinedButton.icon(
+                  onPressed: _loadFromDevice,
+                  icon: const Icon(Icons.sync),
+                  label: const Text('Carregar do ESP32'),
                 ),
-              ],
+              ),
               const SizedBox(height: 16),
               DropdownButtonFormField<ModuleType>(
                 initialValue: _selectedModuleType,
@@ -298,14 +294,8 @@ class _ModuleEditScreenState extends State<ModuleEditScreen> {
   }
 
   List<Widget> _buildSpecificSettingsFields() {
-    final isEsp32C6Rf = _isEsp32C6RfGateway();
-
-    if (!isEsp32C6Rf) {
-      return [];
-    }
-
     return [
-      Text('Configurações do Gateway ESP32-C6 (RF)', style: Theme.of(context).textTheme.titleLarge),
+      Text('Configurações do ${_selectedModuleType.displayName}', style: Theme.of(context).textTheme.titleLarge),
       const SizedBox(height: 16),
       Align(
         alignment: Alignment.centerRight,
