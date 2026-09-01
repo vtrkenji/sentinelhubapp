@@ -12,13 +12,14 @@ import 'config/app_config.dart';
 import 'firebase_options.dart';
 import 'screens/home_screen.dart';
 import 'services/app_globals.dart';
+import 'services/module_service.dart';
 
 // Global keys are provided by services/app_globals.dart
 
 // FCM global state
-const String _fcmTopicName = 'campainha';
 const String _androidNotificationChannelId = 'campainha_alertas';
 const String _androidNotificationChannelName = 'Campainha';
+const String _defaultFcmTopic = 'campainha'; // Fallback for old modules
 
 late FlutterLocalNotificationsPlugin _fcmNotificationsPlugin;
 
@@ -40,7 +41,7 @@ Future<void> _initializeForegroundNotifications(
   const AndroidInitializationSettings initializationSettingsAndroid =
       AndroidInitializationSettings('@mipmap/ic_launcher');
 
-  final InitializationSettings initializationSettings = InitializationSettings(
+  const initializationSettings = InitializationSettings(
     android: initializationSettingsAndroid,
   );
 
@@ -265,10 +266,50 @@ class _SentinelAppState extends State<SentinelApp> {
         debugPrint('[kTsentinel FCM] Notificação aberta ao iniciar o app: ${initialMessage.data}');
       }
 
-      await FirebaseMessaging.instance.subscribeToTopic(_fcmTopicName);
-      debugPrint('[kTsentinel FCM] Inscrito no tópico "$_fcmTopicName"');
+      // Subscribe to all module FCM topics
+      await _subscribeToAllModuleTopics();
     } catch (e, stackTrace) {
       debugPrint('[kTsentinel FCM] Falha ao inicializar Firebase Cloud Messaging: $e\n$stackTrace');
+    }
+  }
+
+  /// Subscribe to FCM topics of all saved modules.
+  /// Uses module-specific fcmtopic if available, otherwise falls back to default.
+  Future<void> _subscribeToAllModuleTopics() async {
+    try {
+      final moduleService = ModuleService();
+      final modules = await moduleService.getModules();
+      
+      final Set<String> topicsToSubscribe = {};
+      
+      for (final module in modules) {
+        final fcmTopic = module.specificSettings['fcmtopic'] as String?;
+        if (fcmTopic != null && fcmTopic.isNotEmpty) {
+          topicsToSubscribe.add(fcmTopic);
+        } else {
+          // Use default topic for modules without explicit fcmtopic (backward compatibility)
+          topicsToSubscribe.add(_defaultFcmTopic);
+        }
+      }
+      
+      // Subscribe to each unique topic
+      for (final topic in topicsToSubscribe) {
+        try {
+          await FirebaseMessaging.instance.subscribeToTopic(topic);
+          debugPrint('[kTsentinel FCM] Inscrito no tópico "$topic"');
+        } catch (e) {
+          debugPrint('[kTsentinel FCM] Erro ao inscrever no tópico "$topic": $e');
+        }
+      }
+      
+      if (topicsToSubscribe.isEmpty) {
+        debugPrint('[kTsentinel FCM] Nenhum módulo configurado. Inscrito no tópico padrão "$_defaultFcmTopic"');
+        await FirebaseMessaging.instance.subscribeToTopic(_defaultFcmTopic);
+      }
+    } catch (e, stackTrace) {
+      debugPrint('[kTsentinel FCM] Erro ao inscrever em tópicos dos módulos: $e\n$stackTrace');
+      // Fallback to default topic
+      await FirebaseMessaging.instance.subscribeToTopic(_defaultFcmTopic);
     }
   }
 

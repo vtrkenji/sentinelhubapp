@@ -1,5 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
+
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
 class Esp32Service {
@@ -17,34 +19,31 @@ class Esp32Service {
     return <String, dynamic>{};
   }
 
-  /// Envia as configurações para o ESP32 usando POST (form-urlencoded).
+  /// Envia as configurações do ESP32-C6 RF usando POST (form-urlencoded).
   Future<bool> salvarConfiguracoes({
     required String ip,
-    required String ssid,
-    required String pass,
-    required String ntfy,
     required String duckdom,
     required String ducktok,
     required String camp1,
     required String camp2,
+    required String fcmTopic,
   }) async {
     try {
       final response = await http.post(
         Uri.parse('http://$ip/salvar'),
         headers: {'Content-Type': 'application/x-www-form-urlencoded'},
         body: {
-          'ssid': ssid,
-          'pass': pass,
-          'ntfy': ntfy,
           'duckdom': duckdom,
           'ducktok': ducktok,
           'camp1': camp1,
           'camp2': camp2,
+          'fcmtopic': fcmTopic,
         },
       ).timeout(const Duration(seconds: 5));
 
       return response.statusCode == 200;
-    } catch (_) {
+    } catch (e) {
+      debugPrint('[Esp32Service] Erro ao salvar configurações do módulo: $e');
       return false;
     }
   }
