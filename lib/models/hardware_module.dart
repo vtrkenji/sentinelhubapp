@@ -1,27 +1,15 @@
 enum ModuleType {
-  wt32Eth01, // Para gateway com campainha RF
-  gatewayEsp32, // Unified Gateway ESP32 (centraliza configurações avançadas)
-  genericEsp32, // Para outros dispositivos ESP32 genéricos
-  rfGateway, // Focado apenas em RF
-  pirSensor,
-  relayModule,
+  wt32Eth01,
+  gatewayEsp32C6Rf,
 }
 
 extension ModuleTypeExtension on ModuleType {
   String get displayName {
     switch (this) {
       case ModuleType.wt32Eth01:
-        return 'Gateway WT32-ETH01 (RF)';
-      case ModuleType.gatewayEsp32:
-        return 'Gateway ESP32 (Centralizado)';
-      case ModuleType.genericEsp32:
-        return 'Módulo ESP32 Genérico';
-      case ModuleType.rfGateway:
-        return 'Gateway RF 433MHz';
-      case ModuleType.pirSensor:
-        return 'Sensor de Presença (PIR)';
-      case ModuleType.relayModule:
-        return 'Módulo Relé';
+        return 'Gateway WT32-ETH01';
+      case ModuleType.gatewayEsp32C6Rf:
+        return 'Gateway ESP32-C6 (RF)';
     }
   }
 }
@@ -74,7 +62,7 @@ class HardwareModule {
       name: json['name'],
       type: ModuleType.values.firstWhere(
         (e) => e.toString() == json['type'],
-        orElse: () => ModuleType.genericEsp32,
+        orElse: () => ModuleType.gatewayEsp32C6Rf,
       ),
       ipAddress: json['ipAddress'],
       specificSettings:
