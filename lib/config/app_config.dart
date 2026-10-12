@@ -1,21 +1,7 @@
 import 'package:flutter/material.dart';
 
-// Configurações do DVR AITEK
+// Constantes de UI. Credenciais e endereços ficam nas configurações do app, nunca no código.
 class AppConfig {
-  // DVR Credentials
-  static const String dvrUsername = 'vtr';
-  static const String dvrPassword = 'vitor6721';
-  static const String dvrHost = 'sentinelhub.ddns.net:554';
-
-  // Câmera IP
-  static const String cameraIpUsername = 'admin';
-  static const String cameraIpPassword = 'admin123456';
-  static const String cameraIpHost = '192.168.15.19:8554';
-
-  // ntfy.sh
-  static const String ntfyTopic = 'sentinel_hub_vitor';
-  static const String ntfyBaseUrl = 'https://ntfy.sh';
-
   // UI
   static const Color primaryColor = Color(0xFFE5B14D);
   static const Color accentColor = Color(0xFFE5B14D);

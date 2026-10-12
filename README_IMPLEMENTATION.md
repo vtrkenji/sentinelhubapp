@@ -89,25 +89,11 @@ lib/
 ## 🔧 Configuração
 
 ### Credenciais do DVR
-Edite `lib/config/app_config.dart`:
+Credenciais e endereços do DVR são cadastrados no app (Módulos e Câmeras); nada fica no código.
 
-```dart
-static const String dvrUsername = 'sptj';
-static const String dvrPassword = 'kenji6721';
-static const String dvrHost = '192.168.1.55:554';
-```
-
-### Câmera IP
-```dart
-static const String cameraIpUsername = 'admin';
-static const String cameraIpPassword = 'admin123456';
-static const String cameraIpHost = '192.168.15.19:8554';
-```
 
 ### ntfy.sh
-```dart
-static const String ntfyTopic = 'sentinel_hub_vitor';
-```
+O tópico ntfy é definido em Configurações do app.
 
 ## 📺 Funcionalidades
 
@@ -140,11 +126,11 @@ static const String ntfyTopic = 'sentinel_hub_vitor';
 ### "Câmera não conecta"
 1. Verifique se o DVR está na mesma rede
 2. Teste a URL RTSP no VLC primeiro
-3. Confirme credenciais em `app_config.dart`
+3. Confirme as credenciais na tela de câmeras
 
 ### "Não recebe alertas do ntfy"
 1. Verifique a URL do tópico ntfy
-2. Teste em: `https://ntfy.sh/sentinel_hub_vitor/json`
+2. Teste em: `https://ntfy.sh/SEU_TOPICO/json`
 3. Verifique se o ESP32 está enviando mensagens
 
 ### "App congela ao abrir câmera"
