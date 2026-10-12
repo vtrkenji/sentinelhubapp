@@ -17,12 +17,8 @@
 // FIREBASE
 // ==========================================
 
-#define FIREBASE_PROJECT_ID "ktsentinel-aa307"
-#define FIREBASE_CLIENT_EMAIL "firebase-adminsdk-fbsvc@ktsentinel-aa307.iam.gserviceaccount.com"
-
-const char FIREBASE_PRIVATE_KEY[] PROGMEM = R"rawliteral(
-[CHAVE_REMOVIDA]
-)rawliteral";
+// Credenciais ficam em firebase_credentials.h (fora do git). Copie de firebase_credentials.example.h.
+#include "firebase_credentials.h"
 
 // ==========================================
 // HARDWARE / REDE

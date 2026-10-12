@@ -49,3 +49,7 @@ build/
 *.symbols
 app.*.map.json
 *.jks
+# Credenciais
+esp32/firebase_credentials.h
+*.jks
+key.properties
