@@ -37,7 +37,8 @@ class NtfyNativeService {
     // 2. Load dynamic topic from SettingsService
     String topic = await settingsService.loadNtfyTopic();
     if (topic.isEmpty) {
-      topic = 'SEU_TOPICO';
+      debugPrint('[NtfyNativeService] Tópico ntfy não configurado.');
+      return;
     }
 
     // 3. Transforma a URL HTTP em WSS (WebSocket Seguro)

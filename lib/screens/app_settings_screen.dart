@@ -78,7 +78,7 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> {
                 controller: _ntfyTopicController,
                 decoration: const InputDecoration(
                   labelText: 'Tópico Ntfy.sh (Local)',
-                  hintText: 'ex: SEU_TOPICO',
+                  hintText: 'seu tópico ntfy',
                   helperText: 'Canal de escuta para as notificações WebSocket'
                 ),
                 validator: (value) {

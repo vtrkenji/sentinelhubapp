@@ -89,25 +89,11 @@ lib/
 ## 🔧 Configuração
 
 ### Credenciais do DVR
-Edite `lib/config/app_config.dart`:
+Credenciais e endereços do DVR são cadastrados no app (Módulos e Câmeras); nada fica no código.
 
-```dart
-static const String dvrUsername = 'sptj';
-static const String dvrPassword = 'REMOVIDO';
-static const String dvrHost = '192.168.1.55:554';
-```
-
-### Câmera IP
-```dart
-static const String cameraIpUsername = 'admin';
-static const String cameraIpPassword = 'REMOVIDO';
-static const String cameraIpHost = '192.168.15.19:8554';
-```
 
 ### ntfy.sh
-```dart
-static const String ntfyTopic = 'SEU_TOPICO';
-```
+O tópico ntfy é definido em Configurações do app.
 
 ## 📺 Funcionalidades
 
@@ -140,7 +126,7 @@ static const String ntfyTopic = 'SEU_TOPICO';
 ### "Câmera não conecta"
 1. Verifique se o DVR está na mesma rede
 2. Teste a URL RTSP no VLC primeiro
-3. Confirme credenciais em `app_config.dart`
+3. Confirme as credenciais na tela de câmeras
 
 ### "Não recebe alertas do ntfy"
 1. Verifique a URL do tópico ntfy
