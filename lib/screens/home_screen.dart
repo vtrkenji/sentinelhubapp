@@ -31,6 +31,15 @@ class _HomeScreenState extends State<HomeScreen> {
     super.initState();
     _loadCameras();
     _loadMonitoramentoState();
+    _stopLegacyForegroundService();
+  }
+
+  Future<void> _stopLegacyForegroundService() async {
+    if (!Platform.isAndroid) return;
+    final service = FlutterBackgroundService();
+    if (await service.isRunning()) {
+      service.invoke('stopService');
+    }
   }
 
   Future<void> _loadMonitoramentoState() async {
@@ -60,17 +69,14 @@ class _HomeScreenState extends State<HomeScreen> {
     final service = FlutterBackgroundService();
     final isRunning = await service.isRunning();
 
+    // O FCM entrega os alertas com o app fechado; o serviço em primeiro plano
+    // (e sua notificação permanente) não é mais iniciado.
+    if (isRunning) {
+      service.invoke('stopService');
+    }
+    NtfyNativeService.instance.stop();
     if (nextValue) {
-      if (!isRunning) {
-        await service.startService();
-      }
-      NtfyNativeService.instance.stop();
       await NtfyNativeService.instance.start();
-    } else {
-      if (isRunning) {
-        service.invoke('stopService');
-      }
-      NtfyNativeService.instance.stop();
     }
 
     if (!mounted) return;
