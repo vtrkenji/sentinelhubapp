@@ -11,6 +11,7 @@ import '../services/camera_service.dart';
 import '../services/ntfy_native_service.dart';
 import '../services/settings_service.dart';
 import 'home/camera_stream_tile.dart';
+import 'guard_screen.dart';
 import 'modules_and_cameras_screen.dart';
 import 'update_screen.dart';
 
@@ -284,6 +285,13 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ],
             ),
+          ),
+          IconButton(
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const GuardScreen()),
+            ),
+            tooltip: 'Guard (notebook)',
+            icon: const Icon(Icons.shield_rounded, color: AppConfig.accentColor),
           ),
           AnimatedBuilder(
             animation: AlertHistoryService.instance,
