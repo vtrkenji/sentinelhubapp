@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 
 import '../config/app_config.dart';
+import '../services/alert_history_service.dart';
 import '../services/guard_service.dart';
+import '../services/monitoring_service.dart';
 
 class GuardScreen extends StatefulWidget {
   const GuardScreen({super.key});
@@ -18,12 +20,17 @@ class _GuardScreenState extends State<GuardScreen> {
   bool _scheduleEnabled = false;
   List<GuardWindow> _windows = [];
   Map<String, dynamic> _settings = {};
+  List<Map<String, dynamic>> _events = [];
+  Map<String, String> _headers = {};
+  String _baseUrl = '';
+  bool _doorbell = false;
   bool _loading = true;
   String? _error;
 
   @override
   void initState() {
     super.initState();
+    AlertHistoryService.instance.markAllRead();
     _refresh();
   }
 
@@ -32,6 +39,15 @@ class _GuardScreenState extends State<GuardScreen> {
       _loading = true;
       _error = null;
     });
+    _doorbell = await MonitoringService.isEnabled();
+    try {
+      final ev = await _service.events();
+      _events = ev;
+      _headers = await _service.authHeaders();
+      _baseUrl = await _service.loadUrl();
+    } catch (e) {
+      _error = e.toString();
+    }
     try {
       final st = await _service.status();
       final sch = await _service.loadSchedule();
@@ -145,15 +161,19 @@ class _GuardScreenState extends State<GuardScreen> {
   Widget build(BuildContext context) {
     final st = _status;
     return DefaultTabController(
-      length: 2,
+      length: 3,
       child: Scaffold(
         backgroundColor: AppConfig.backgroundColor,
         appBar: AppBar(
-          title: const Text('Guard'),
+          title: const Text('Alertas e Guard'),
           bottom: const TabBar(
             indicatorColor: AppConfig.accentColor,
             labelColor: AppConfig.accentColor,
-            tabs: [Tab(text: 'Controle'), Tab(text: 'Ajustes')],
+            tabs: [
+              Tab(text: 'Alertas'),
+              Tab(text: 'Controle'),
+              Tab(text: 'Ajustes')
+            ],
           ),
           actions: [
             IconButton(
@@ -168,7 +188,93 @@ class _GuardScreenState extends State<GuardScreen> {
         ),
         body: _loading && st == null
             ? const Center(child: CircularProgressIndicator())
-            : TabBarView(children: [_controlTab(st), _settingsTab()]),
+            : TabBarView(
+                children: [_alertsTab(), _controlTab(st), _settingsTab()]),
+      ),
+    );
+  }
+
+  Widget _alertsTab() {
+    return AnimatedBuilder(
+      animation: AlertHistoryService.instance,
+      builder: (context, _) {
+        final items = <({DateTime time, Widget tile})>[];
+        for (final a in AlertHistoryService.instance.alerts) {
+          items.add((
+            time: a.time,
+            tile: ListTile(
+              leading: const Icon(Icons.notifications_active_rounded,
+                  color: AppConfig.alertColor),
+              title: Text(a.title),
+              subtitle: Text('${a.body}\n${_fmt(a.time)}'),
+            ),
+          ));
+        }
+        for (final e in _events) {
+          final t =
+              DateTime.tryParse(e['start'] as String? ?? '') ?? DateTime.now();
+          items.add((time: t, tile: _eventTile(e, t)));
+        }
+        items.sort((a, b) => b.time.compareTo(a.time));
+        return RefreshIndicator(
+          onRefresh: _refresh,
+          child: ListView(
+            padding: const EdgeInsets.all(8),
+            children: [
+              if (_error != null) _errorCard(),
+              if (items.isEmpty && _error == null)
+                const Padding(
+                  padding: EdgeInsets.all(24),
+                  child: Text('Nenhum alerta ainda.',
+                      style: TextStyle(color: AppConfig.mutedTextColor)),
+                ),
+              for (final i in items) i.tile,
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  String _fmt(DateTime t) {
+    final l = t.toLocal();
+    String two(int v) => v.toString().padLeft(2, '0');
+    return '${two(l.day)}/${two(l.month)} ${two(l.hour)}:${two(l.minute)}';
+  }
+
+  Widget _eventTile(Map<String, dynamic> e, DateTime t) {
+    const kinds = {'tripwire': 'Linha cruzada', 'loiter': 'Pessoa parada'};
+    final kind = kinds[e['kind']] ??
+        (e['person'] == 1 || e['person'] == true ? 'Pessoa' : 'Movimento');
+    final sent = e['notified'] == 1 || e['notified'] == true;
+    final id = e['id'] as int;
+    return Card(
+      color: AppConfig.cardColor,
+      child: ListTile(
+        leading: SizedBox(
+          width: 64,
+          height: 48,
+          child: _baseUrl.isEmpty
+              ? const Icon(Icons.videocam)
+              : Image.network(
+                  '$_baseUrl/v1/snapshot?id=$id',
+                  headers: _headers,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) => const Icon(Icons.videocam_off),
+                ),
+        ),
+        title: Text('$kind • ${e['cameraName'] ?? ''}'),
+        subtitle: Text(
+            '${_fmt(t)} • ${sent ? 'notificado' : 'só registro (${e['reason'] ?? '-'})'}'),
+        onTap: () => showDialog<void>(
+          context: context,
+          builder: (_) => Dialog(
+            child: InteractiveViewer(
+              child: Image.network('$_baseUrl/v1/snapshot?id=$id',
+                  headers: _headers),
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -282,6 +388,21 @@ class _GuardScreenState extends State<GuardScreen> {
       padding: const EdgeInsets.all(16),
       children: [
         if (_error != null) _errorCard(),
+        Card(
+          color: AppConfig.cardColor,
+          child: SwitchListTile(
+            title: const Text('Push da campainha'),
+            subtitle: const Text('Escuta o aviso da campainha neste aparelho'),
+            value: _doorbell,
+            activeThumbColor: AppConfig.accentColor,
+            onChanged: MonitoringService.supported
+                ? (v) async {
+                    await MonitoringService.setEnabled(v);
+                    if (mounted) setState(() => _doorbell = v);
+                  }
+                : null,
+          ),
+        ),
         _switch('Enviar notificações', 'Desligado = só registra o histórico',
             'notify'),
         _switch('Só avisar com pessoa', 'Ignora carros, animais e sombras',

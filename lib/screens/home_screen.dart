@@ -8,8 +8,6 @@ import '../config/app_config.dart';
 import '../models/camera.dart';
 import '../services/alert_history_service.dart';
 import '../services/camera_service.dart';
-import '../services/ntfy_native_service.dart';
-import '../services/settings_service.dart';
 import 'home/camera_stream_tile.dart';
 import 'guard_screen.dart';
 import 'modules_and_cameras_screen.dart';
@@ -24,13 +22,11 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   late Future<List<Camera>> _camerasFuture;
-  bool _monitoramentoAtivo = false;
 
   @override
   void initState() {
     super.initState();
     _loadCameras();
-    _loadMonitoramentoState();
     _stopLegacyForegroundService();
   }
 
@@ -40,49 +36,6 @@ class _HomeScreenState extends State<HomeScreen> {
     if (await service.isRunning()) {
       service.invoke('stopService');
     }
-  }
-
-  Future<void> _loadMonitoramentoState() async {
-    final ativo = await SettingsService().loadBackgroundAtivo();
-    if (!mounted) return;
-    setState(() {
-      _monitoramentoAtivo = ativo;
-    });
-  }
-
-  Future<void> _toggleMonitoramento() async {
-    if (!Platform.isAndroid && !Platform.isIOS) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Monitoramento em background disponível apenas no Android.'),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
-      return;
-    }
-
-    final nextValue = !_monitoramentoAtivo;
-    final settingsService = SettingsService();
-    await settingsService.saveBackgroundAtivo(nextValue);
-
-    final service = FlutterBackgroundService();
-    final isRunning = await service.isRunning();
-
-    // O FCM entrega os alertas com o app fechado; o serviço em primeiro plano
-    // (e sua notificação permanente) não é mais iniciado.
-    if (isRunning) {
-      service.invoke('stopService');
-    }
-    NtfyNativeService.instance.stop();
-    if (nextValue) {
-      await NtfyNativeService.instance.start();
-    }
-
-    if (!mounted) return;
-    setState(() {
-      _monitoramentoAtivo = nextValue;
-    });
   }
 
   void _loadCameras() {
@@ -116,7 +69,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 decoration: BoxDecoration(
                   color: AppConfig.accentColor.withAlpha(28),
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: AppConfig.accentColor.withAlpha(90)),
+                  border:
+                      Border.all(color: AppConfig.accentColor.withAlpha(90)),
                 ),
                 child: Icon(icon, size: 24, color: AppConfig.accentColor),
               ),
@@ -136,95 +90,6 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ),
       ),
-    );
-  }
-
-  void _openAlertLog() {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) {
-        return AnimatedBuilder(
-          animation: AlertHistoryService.instance,
-          builder: (context, _) {
-            final alerts = AlertHistoryService.instance.alerts;
-
-            return Container(
-              constraints: BoxConstraints(
-                maxHeight: MediaQuery.of(context).size.height * 0.7,
-              ),
-              decoration: const BoxDecoration(
-                color: Color(0xFF0D1419),
-                borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
-              ),
-              padding: const EdgeInsets.fromLTRB(18, 18, 18, 24),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      const Icon(Icons.notifications_active_rounded, color: AppConfig.accentColor),
-                      const SizedBox(width: 8),
-                      const Expanded(
-                        child: Text(
-                          'Log de notificações',
-                          style: TextStyle(
-                            color: AppConfig.textColor,
-                            fontSize: 18,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                      ),
-                      IconButton(
-                        onPressed: () => Navigator.of(context).pop(),
-                        icon: const Icon(Icons.close_rounded),
-                        color: AppConfig.textColor,
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  if (alerts.isEmpty)
-                    const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 18.0),
-                      child: Text(
-                        'Nenhuma notificação registrada ainda.',
-                        style: TextStyle(color: AppConfig.mutedTextColor),
-                      ),
-                    )
-                  else
-                    Flexible(
-                      child: ListView.separated(
-                        shrinkWrap: true,
-                        itemCount: alerts.length,
-                        separatorBuilder: (_, __) => const Divider(color: Color(0xFF1D2A31)),
-                        itemBuilder: (context, index) {
-                          final alert = alerts[index];
-                          return ListTile(
-                            contentPadding: EdgeInsets.zero,
-                            leading: const Icon(Icons.warning_amber_rounded, color: AppConfig.alertColor),
-                            title: Text(
-                              alert.title,
-                              style: const TextStyle(
-                                color: AppConfig.textColor,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                            subtitle: Text(
-                              '${alert.body}\n${alert.time.toLocal().toString().substring(0, 16)}',
-                              style: const TextStyle(color: AppConfig.mutedTextColor),
-                            ),
-                          );
-                        },
-                      ),
-                    ),
-                ],
-              ),
-            );
-          },
-        );
-      },
     );
   }
 
@@ -248,69 +113,21 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ),
         actions: [
-          const SizedBox(width: 10),
-          Container(
-            margin: const EdgeInsets.only(right: 6),
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(14),
-              color: _monitoramentoAtivo
-                  ? AppConfig.accentColor.withAlpha(28)
-                  : const Color(0xFF1A2328),
-              border: Border.all(
-                color: _monitoramentoAtivo
-                    ? AppConfig.accentColor.withAlpha(150)
-                    : const Color(0xFF2B3940),
-              ),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  _monitoramentoAtivo ? 'Ativo' : 'Inativo',
-                  style: TextStyle(
-                    color: _monitoramentoAtivo ? AppConfig.accentColor : AppConfig.mutedTextColor,
-                    fontSize: 10,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: 0.5,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Transform.scale(
-                  scale: 0.82,
-                  child: Switch.adaptive(
-                    value: _monitoramentoAtivo,
-                    activeTrackColor: AppConfig.accentColor.withAlpha(180),
-                    activeThumbColor: AppConfig.accentColor,
-                    inactiveTrackColor: const Color(0xFF2E3A40),
-                    inactiveThumbColor: const Color(0xFFC9D6D9),
-                    onChanged: (Platform.isAndroid || Platform.isIOS)
-                        ? (_) => _toggleMonitoramento()
-                        : null,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          IconButton(
-            onPressed: () => Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => const GuardScreen()),
-            ),
-            tooltip: 'Guard (notebook)',
-            icon: const Icon(Icons.shield_rounded, color: AppConfig.accentColor),
-          ),
           AnimatedBuilder(
             animation: AlertHistoryService.instance,
             builder: (context, _) {
               final count = AlertHistoryService.instance.unreadCount;
               return IconButton(
-                onPressed: _openAlertLog,
-                tooltip: 'Log de notificações',
+                onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const GuardScreen()),
+                ),
+                tooltip: 'Alertas e Guard',
                 iconSize: 26,
                 icon: Stack(
                   clipBehavior: Clip.none,
                   children: [
-                    const Icon(Icons.notifications_rounded, color: AppConfig.accentColor),
+                    const Icon(Icons.notifications_rounded,
+                        color: AppConfig.accentColor),
                     if (count > 0)
                       Positioned(
                         right: -3,
@@ -321,7 +138,8 @@ class _HomeScreenState extends State<HomeScreen> {
                             color: AppConfig.alertColor,
                             shape: BoxShape.circle,
                           ),
-                          constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
+                          constraints:
+                              const BoxConstraints(minWidth: 16, minHeight: 16),
                           child: Text(
                             count > 9 ? '9+' : '$count',
                             style: const TextStyle(
@@ -350,9 +168,12 @@ class _HomeScreenState extends State<HomeScreen> {
           padding: const EdgeInsets.symmetric(horizontal: 6),
           child: Row(
             children: [
-              _bottomAction(Icons.videocam_rounded, 'Módulos e câmeras', () => _openModules(initialTab: 0)),
-              _bottomAction(Icons.memory_rounded, 'Config. ESP32', () => _openModules(initialTab: 1)),
-              _bottomAction(Icons.system_update_alt_rounded, 'Atualizações', () {
+              _bottomAction(Icons.videocam_rounded, 'Módulos e câmeras',
+                  () => _openModules(initialTab: 0)),
+              _bottomAction(Icons.memory_rounded, 'Config. ESP32',
+                  () => _openModules(initialTab: 1)),
+              _bottomAction(Icons.system_update_alt_rounded, 'Atualizações',
+                  () {
                 Navigator.of(context).push(
                   MaterialPageRoute(builder: (_) => const UpdateScreen()),
                 );
@@ -372,9 +193,9 @@ class _HomeScreenState extends State<HomeScreen> {
                 child: Text(
                   'Monitoramento',
                   style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    color: AppConfig.textColor,
-                    fontWeight: FontWeight.w700,
-                  ),
+                        color: AppConfig.textColor,
+                        fontWeight: FontWeight.w700,
+                      ),
                 ),
               ),
               AnimatedBuilder(
@@ -388,14 +209,16 @@ class _HomeScreenState extends State<HomeScreen> {
                   return Container(
                     width: double.infinity,
                     margin: const EdgeInsets.only(bottom: 14),
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 12, vertical: 10),
                     decoration: BoxDecoration(
                       color: const Color(0xFF111F22),
                       border: Border.all(color: const Color(0xFF294147)),
                     ),
                     child: Row(
                       children: [
-                        const Icon(Icons.warning_amber_rounded, color: AppConfig.alertColor, size: 18),
+                        const Icon(Icons.warning_amber_rounded,
+                            color: AppConfig.alertColor, size: 18),
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(
@@ -432,7 +255,9 @@ class _HomeScreenState extends State<HomeScreen> {
                       return const Center(child: CircularProgressIndicator());
                     }
 
-                    final cameras = (snapshot.data ?? const <Camera>[]).where((camera) => camera.isActive).toList();
+                    final cameras = (snapshot.data ?? const <Camera>[])
+                        .where((camera) => camera.isActive)
+                        .toList();
 
                     if (cameras.isEmpty) {
                       return Center(
@@ -451,7 +276,9 @@ class _HomeScreenState extends State<HomeScreen> {
                                 height: 58,
                                 decoration: BoxDecoration(
                                   color: AppConfig.accentColor.withAlpha(20),
-                                  border: Border.all(color: AppConfig.accentColor.withAlpha(120)),
+                                  border: Border.all(
+                                      color:
+                                          AppConfig.accentColor.withAlpha(120)),
                                 ),
                                 child: const Icon(
                                   Icons.videocam_off_rounded,
@@ -491,7 +318,8 @@ class _HomeScreenState extends State<HomeScreen> {
                     }
 
                     final width = MediaQuery.of(context).size.width;
-                    final crossAxisCount = width < 600 ? 1 : (width < 1100 ? 2 : 3);
+                    final crossAxisCount =
+                        width < 600 ? 1 : (width < 1100 ? 2 : 3);
 
                     return GridView.builder(
                       itemCount: cameras.length,

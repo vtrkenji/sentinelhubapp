@@ -25,7 +25,8 @@ class GuardWindow {
 }
 
 class GuardStatus {
-  GuardStatus({required this.armed, required this.active, required this.cameras});
+  GuardStatus(
+      {required this.armed, required this.active, required this.cameras});
 
   /// Armado manualmente (botão).
   final bool armed;
@@ -64,7 +65,8 @@ class GuardService {
     await p.setString(_tokenKey, token.trim());
   }
 
-  Future<Map<String, dynamic>> _call(String method, String path, {Object? body}) async {
+  Future<Map<String, dynamic>> _call(String method, String path,
+      {Object? body}) async {
     final url = await loadUrl();
     final token = await loadToken();
     if (token.isEmpty) throw GuardException('Configure o token do Guard.');
@@ -78,19 +80,27 @@ class GuardService {
       late http.Response r;
       switch (method) {
         case 'PUT':
-          r = await http.put(uri, headers: headers, body: encoded).timeout(const Duration(seconds: 10));
+          r = await http
+              .put(uri, headers: headers, body: encoded)
+              .timeout(const Duration(seconds: 10));
           break;
         case 'POST':
-          r = await http.post(uri, headers: headers).timeout(const Duration(seconds: 10));
+          r = await http
+              .post(uri, headers: headers)
+              .timeout(const Duration(seconds: 10));
           break;
         default:
-          r = await http.get(uri, headers: headers).timeout(const Duration(seconds: 10));
+          r = await http
+              .get(uri, headers: headers)
+              .timeout(const Duration(seconds: 10));
       }
       if (r.statusCode == 401) throw GuardException('Token inválido.');
-      if (r.statusCode == 429) throw GuardException('Muitas tentativas. Aguarde 5 minutos.');
+      if (r.statusCode == 429)
+        throw GuardException('Muitas tentativas. Aguarde 5 minutos.');
       final data = jsonDecode(utf8.decode(r.bodyBytes)) as Map<String, dynamic>;
       if (r.statusCode != 200 || data['ok'] != true) {
-        throw GuardException((data['error'] ?? 'Erro ${r.statusCode}').toString());
+        throw GuardException(
+            (data['error'] ?? 'Erro ${r.statusCode}').toString());
       }
       return data['result'] as Map<String, dynamic>;
     } on GuardException {
@@ -109,7 +119,8 @@ class GuardService {
     );
   }
 
-  Future<void> setArmed(bool armed) => _call('POST', armed ? '/v1/arm' : '/v1/disarm');
+  Future<void> setArmed(bool armed) =>
+      _call('POST', armed ? '/v1/arm' : '/v1/disarm');
 
   Future<({bool enabled, List<GuardWindow> windows})> loadSchedule() async {
     final r = await _call('GET', '/v1/schedule');
@@ -126,6 +137,31 @@ class GuardService {
         'enabled': enabled,
         'windows': windows.map((w) => w.toJson()).toList(),
       });
+
+  Future<List<Map<String, dynamic>>> events({int limit = 50}) async {
+    final url = await loadUrl();
+    final token = await loadToken();
+    if (token.isEmpty) throw GuardException('Configure o token do Guard.');
+    try {
+      final r = await http.get(Uri.parse('$url/v1/events?limit=$limit'),
+          headers: {
+            'Authorization': 'Bearer $token'
+          }).timeout(const Duration(seconds: 10));
+      if (r.statusCode == 401) throw GuardException('Token inválido.');
+      final data = jsonDecode(utf8.decode(r.bodyBytes)) as Map<String, dynamic>;
+      return (data['result'] as List).cast<Map<String, dynamic>>();
+    } on GuardException {
+      rethrow;
+    } catch (_) {
+      throw GuardException('Não foi possível falar com o Guard.');
+    }
+  }
+
+  Future<Map<String, String>> authHeaders() async =>
+      {'Authorization': 'Bearer ${await loadToken()}'};
+
+  Future<String> snapshotUrl(int id) async =>
+      '${await loadUrl()}/v1/snapshot?id=$id';
 
   Future<Map<String, dynamic>> loadSettings() => _call('GET', '/v1/settings');
 
