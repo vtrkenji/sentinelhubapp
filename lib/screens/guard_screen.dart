@@ -21,6 +21,7 @@ class _GuardScreenState extends State<GuardScreen> {
   List<GuardWindow> _windows = [];
   Map<String, dynamic> _settings = {};
   List<Map<String, dynamic>> _events = [];
+  bool _showAll = false;
   Map<String, String> _headers = {};
   String _baseUrl = '';
   bool _doorbell = false;
@@ -211,6 +212,7 @@ class _GuardScreenState extends State<GuardScreen> {
           ));
         }
         for (final e in _events) {
+          if (!_showAll && e['notified'] != 1 && e['notified'] != true) continue;
           final t =
               DateTime.tryParse(e['start'] as String? ?? '') ?? DateTime.now();
           items.add((time: t, tile: _eventTile(e, t)));
@@ -222,6 +224,17 @@ class _GuardScreenState extends State<GuardScreen> {
             padding: const EdgeInsets.all(8),
             children: [
               if (_error != null) _errorCard(),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  child: FilterChip(
+                    label: const Text('Ver tudo (inclui descartados)'),
+                    selected: _showAll,
+                    onSelected: (v) => setState(() => _showAll = v),
+                  ),
+                ),
+              ),
               if (items.isEmpty && _error == null)
                 const Padding(
                   padding: EdgeInsets.all(24),
@@ -405,6 +418,9 @@ class _GuardScreenState extends State<GuardScreen> {
         ),
         _switch('Enviar notificações', 'Desligado = só registra o histórico',
             'notify'),
+        _switch('Só permanência e entrada',
+            'Pessoa passando não avisa; avisa se parar ou cruzar a linha',
+            'behaviorOnly'),
         _switch('Só avisar com pessoa', 'Ignora carros, animais e sombras',
             'requirePerson'),
         _slider('Sensibilidade', 'sensitivity', 1, 10, 9, (v) => '${v.round()}',
