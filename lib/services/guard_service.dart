@@ -126,4 +126,9 @@ class GuardService {
         'enabled': enabled,
         'windows': windows.map((w) => w.toJson()).toList(),
       });
+
+  Future<Map<String, dynamic>> loadSettings() => _call('GET', '/v1/settings');
+
+  Future<Map<String, dynamic>> saveSettings(Map<String, dynamic> values) =>
+      _call('PUT', '/v1/settings', body: values);
 }
