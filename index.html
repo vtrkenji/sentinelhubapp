@@ -407,7 +407,7 @@
                   <span class="w-1.5 h-1.5 rounded-full bg-online"></span>
 
                   <span class="font-mono text-[10px] text-zinc-500">
-                    LOCAL
+                    APP + GUARD
                   </span>
 
                 </div>
@@ -436,7 +436,7 @@
                   <div
                     class="border border-online/20 bg-online/5 text-online rounded-md px-2.5 py-1.5 font-mono text-[9px]"
                   >
-                    SYSTEM ONLINE
+                    GUARD ON
                   </div>
 
                 </div>
@@ -1066,10 +1066,10 @@
           <div class="border border-white/[.08] bg-black/20 rounded-xl p-5 text-sm">
             <div class="font-display font-semibold text-signal-400 mb-2">Guard · notebook em casa</div>
             <ul class="text-zinc-400 space-y-1 list-disc pl-4">
-              <li>Lê o RTSP das câmeras / DVR</li>
-              <li>Detecta movimento e pessoas</li>
-              <li>Avisa quando alguém fica parado ou cruza a entrada</li>
-              <li>Envia push direto para o celular</li>
+              <li>Lê o RTSP das câmeras / DVR 24h</li>
+              <li>Painel no notebook: ON/OFF, agenda e zonas no snapshot</li>
+              <li>Avisa tripwire, loiter e pessoa (fail-closed)</li>
+              <li>Push FCM para o app, sem cloud de câmera</li>
             </ul>
           </div>
           <div class="flex items-center justify-center text-zinc-500 font-mono text-xs">push · controle ⇄</div>
@@ -1234,14 +1234,16 @@
               <div>
                 <h2 class="font-display text-4xl font-bold">kTsentinel Guard</h2>
                 <p class="text-zinc-500 text-lg mt-4 max-w-xl">
-                  Serviço para Linux (testado no Mint 22) que roda em segundo plano num notebook ou mini-PC
-                  na sua rede. Precisa de Python 3, OpenCV e ffmpeg.
+                  O mesmo visual do app, no notebook: indicador ON/OFF, desenho de zonas no snapshot
+                  (retângulo ou ponto a ponto) e agenda. Roda em segundo plano no Linux
+                  (incluindo Fedora imutável — instala só no home).
                 </p>
                 <ol class="mt-5 text-sm text-zinc-400 list-decimal pl-5 space-y-1">
                   <li>Baixe e extraia o pacote</li>
-                  <li>Rode <code class="font-mono text-zinc-300">./ktsentinel-guard/scripts/install.sh</code></li>
-                  <li>Configure câmeras e a chave Firebase (só no seu notebook, nunca na internet)</li>
-                  <li>No app, abra o sino e informe o endereço e o token do Guard</li>
+                  <li>Rode <code class="font-mono text-zinc-300">./scripts/install.sh</code></li>
+                  <li>Configure câmeras e a chave Firebase só no notebook</li>
+                  <li>Abra <code class="font-mono text-zinc-300">http://IP-DO-NOTE:8765/</code> — neste PC não pede token</li>
+                  <li>No celular, o app arma/desarma e recebe os pushes</li>
                 </ol>
                 <div class="flex items-center gap-2 mt-5">
                   <span class="w-1.5 h-1.5 rounded-full bg-online"></span>
