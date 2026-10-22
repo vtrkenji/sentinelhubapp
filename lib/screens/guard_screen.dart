@@ -26,7 +26,10 @@ class _GuardScreenState extends State<GuardScreen> {
   String _baseUrl = '';
   bool _doorbell = false;
   bool _loading = true;
+  bool _needsSetup = false;
   String? _error;
+  final _urlCtrl = TextEditingController();
+  final _tokenCtrl = TextEditingController();
 
   @override
   void initState() {
@@ -35,12 +38,33 @@ class _GuardScreenState extends State<GuardScreen> {
     _refresh();
   }
 
+  @override
+  void dispose() {
+    _urlCtrl.dispose();
+    _tokenCtrl.dispose();
+    super.dispose();
+  }
+
   Future<void> _refresh() async {
     setState(() {
       _loading = true;
       _error = null;
     });
     _doorbell = await MonitoringService.isEnabled();
+    final url = await _service.loadUrl();
+    final token = await _service.loadToken();
+    if (url.isEmpty || token.isEmpty) {
+      if (!mounted) return;
+      setState(() {
+        _needsSetup = true;
+        _loading = false;
+        _status = null;
+        _error = null;
+        _urlCtrl.text = url;
+        _tokenCtrl.text = token;
+      });
+      return;
+    }
     try {
       final ev = await _service.events();
       _events = ev;
@@ -55,6 +79,8 @@ class _GuardScreenState extends State<GuardScreen> {
       final cfg = await _service.loadSettings();
       if (!mounted) return;
       setState(() {
+        _needsSetup = false;
+        _error = null;
         _status = st;
         _scheduleEnabled = sch.enabled;
         _windows = sch.windows;
@@ -62,7 +88,15 @@ class _GuardScreenState extends State<GuardScreen> {
       });
     } catch (e) {
       if (!mounted) return;
-      setState(() => _error = e.toString());
+      final msg = e.toString();
+      setState(() {
+        _error = msg;
+        if (msg.contains('Token') || msg.contains('endereço')) {
+          _needsSetup = true;
+          _urlCtrl.text = url;
+          _tokenCtrl.text = token;
+        }
+      });
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -121,41 +155,72 @@ class _GuardScreenState extends State<GuardScreen> {
     await _saveSchedule();
   }
 
-  Future<void> _editConnection() async {
-    final url = TextEditingController(text: await _service.loadUrl());
-    final token = TextEditingController(text: await _service.loadToken());
-    if (!mounted) return;
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Conexão com o Guard'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-                controller: url,
-                decoration: const InputDecoration(labelText: 'Endereço')),
-            TextField(
-              controller: token,
-              obscureText: true,
-              decoration: const InputDecoration(labelText: 'Token da API'),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('Cancelar')),
-          TextButton(
-              onPressed: () => Navigator.pop(ctx, true),
-              child: const Text('Salvar')),
-        ],
-      ),
-    );
-    if (ok == true) {
-      await _service.saveConnection(url.text, token.text);
-      await _refresh();
+  Future<void> _saveConnection() async {
+    final url = _urlCtrl.text.trim();
+    final token = _tokenCtrl.text.trim();
+    if (!url.startsWith('http://') && !url.startsWith('https://')) {
+      setState(() => _error = 'O endereço precisa começar com https://');
+      return;
     }
+    if (token.isEmpty) {
+      setState(() => _error = 'Cole o token da API desse Guard.');
+      return;
+    }
+    await _service.saveConnection(url, token);
+    await _refresh();
+  }
+
+  Widget _connectionForm({required bool firstTime}) {
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        Text(
+          firstTime ? 'Conectar ao Guard' : 'Conexão com o Guard',
+          style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
+        ),
+        const SizedBox(height: 8),
+        const Text(
+          'Cada casa tem o próprio endereço e token. Preencha os dois para este celular falar com o Guard dela.',
+          style: TextStyle(color: AppConfig.mutedTextColor),
+        ),
+        const SizedBox(height: 16),
+        TextField(
+          controller: _urlCtrl,
+          keyboardType: TextInputType.url,
+          autocorrect: false,
+          decoration: const InputDecoration(
+            labelText: 'Endereço',
+            hintText: 'https://seu-dominio:8443',
+          ),
+        ),
+        const SizedBox(height: 12),
+        TextField(
+          controller: _tokenCtrl,
+          obscureText: true,
+          autocorrect: false,
+          decoration: const InputDecoration(
+            labelText: 'Token da API',
+          ),
+        ),
+        if (_error != null) ...[
+          const SizedBox(height: 12),
+          Text(_error!, style: const TextStyle(color: AppConfig.alertColor)),
+        ],
+        const SizedBox(height: 16),
+        FilledButton(
+          onPressed: _loading ? null : _saveConnection,
+          child: const Text('Entrar'),
+        ),
+        if (!firstTime)
+          TextButton(
+            onPressed: () => setState(() {
+              _needsSetup = false;
+              _error = null;
+            }),
+            child: const Text('Cancelar'),
+          ),
+      ],
+    );
   }
 
   @override
@@ -167,30 +232,44 @@ class _GuardScreenState extends State<GuardScreen> {
         backgroundColor: AppConfig.backgroundColor,
         appBar: AppBar(
           title: const Text('Alertas e Guard'),
-          bottom: const TabBar(
-            indicatorColor: AppConfig.accentColor,
-            labelColor: AppConfig.accentColor,
-            tabs: [
-              Tab(text: 'Alertas'),
-              Tab(text: 'Controle'),
-              Tab(text: 'Ajustes')
-            ],
-          ),
-          actions: [
-            IconButton(
-                onPressed: _refresh,
-                icon: const Icon(Icons.refresh),
-                tooltip: 'Atualizar'),
-            IconButton(
-                onPressed: _editConnection,
-                icon: const Icon(Icons.settings),
-                tooltip: 'Conexão'),
-          ],
+          bottom: _needsSetup
+              ? null
+              : const TabBar(
+                  indicatorColor: AppConfig.accentColor,
+                  labelColor: AppConfig.accentColor,
+                  tabs: [
+                    Tab(text: 'Alertas'),
+                    Tab(text: 'Controle'),
+                    Tab(text: 'Ajustes')
+                  ],
+                ),
+          actions: _needsSetup
+              ? null
+              : [
+                  IconButton(
+                      onPressed: _refresh,
+                      icon: const Icon(Icons.refresh),
+                      tooltip: 'Atualizar'),
+                  IconButton(
+                      onPressed: () async {
+                        _urlCtrl.text = await _service.loadUrl();
+                        _tokenCtrl.text = await _service.loadToken();
+                        if (!mounted) return;
+                        setState(() {
+                          _needsSetup = true;
+                          _error = null;
+                        });
+                      },
+                      icon: const Icon(Icons.link),
+                      tooltip: 'Endereço e token'),
+                ],
         ),
-        body: _loading && st == null
-            ? const Center(child: CircularProgressIndicator())
-            : TabBarView(
-                children: [_alertsTab(), _controlTab(st), _settingsTab()]),
+        body: _needsSetup
+            ? _connectionForm(firstTime: st == null)
+            : _loading && st == null
+                ? const Center(child: CircularProgressIndicator())
+                : TabBarView(
+                    children: [_alertsTab(), _controlTab(st), _settingsTab()]),
       ),
     );
   }

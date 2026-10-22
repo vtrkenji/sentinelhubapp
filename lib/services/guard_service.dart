@@ -47,11 +47,10 @@ class GuardException implements Exception {
 class GuardService {
   static const _urlKey = 'guard_url';
   static const _tokenKey = 'guard_token';
-  static const defaultUrl = 'https://ktsentinelhubapp.duckdns.org:8443';
 
   Future<String> loadUrl() async {
     final p = await SharedPreferences.getInstance();
-    return p.getString(_urlKey) ?? defaultUrl;
+    return (p.getString(_urlKey) ?? '').trim();
   }
 
   Future<String> loadToken() async {
@@ -69,7 +68,9 @@ class GuardService {
       {Object? body}) async {
     final url = await loadUrl();
     final token = await loadToken();
-    if (token.isEmpty) throw GuardException('Configure o token do Guard.');
+    if (url.isEmpty || token.isEmpty) {
+      throw GuardException('Informe o endereço e o token do Guard.');
+    }
     final uri = Uri.parse('$url$path');
     final headers = {
       'Authorization': 'Bearer $token',
@@ -141,7 +142,9 @@ class GuardService {
   Future<List<Map<String, dynamic>>> events({int limit = 50}) async {
     final url = await loadUrl();
     final token = await loadToken();
-    if (token.isEmpty) throw GuardException('Configure o token do Guard.');
+    if (url.isEmpty || token.isEmpty) {
+      throw GuardException('Informe o endereço e o token do Guard.');
+    }
     try {
       final r = await http.get(Uri.parse('$url/v1/events?limit=$limit'),
           headers: {
