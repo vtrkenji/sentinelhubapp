@@ -308,10 +308,8 @@ class _GuardScreenState extends State<GuardScreen> {
             child: SwitchListTile(
               title: Text(st.armed ? 'Guard armado' : 'Guard desarmado'),
               subtitle: Text(!st.armed
-                  ? 'Desarmado manualmente'
-                  : st.active
-                      ? 'Vigiando agora (${st.cameras} câmera(s))'
-                      : 'Armado, aguardando a próxima janela da agenda'),
+                  ? 'Desarmado. A agenda volta a valer no próximo horário.'
+                  : 'Vigiando agora (${st.cameras} câmera(s))'),
               value: st.armed,
               activeThumbColor: AppConfig.accentColor,
               onChanged: _toggleArmed,
@@ -322,7 +320,8 @@ class _GuardScreenState extends State<GuardScreen> {
             color: AppConfig.cardColor,
             child: SwitchListTile(
               title: const Text('Agenda automática'),
-              subtitle: const Text('Só vigia dentro dos horários abaixo'),
+              subtitle: const Text(
+                  'Ligado: arma e desarma nestes horários. Armar no interruptor liga na hora.'),
               value: _scheduleEnabled,
               activeThumbColor: AppConfig.accentColor,
               onChanged: (v) {
