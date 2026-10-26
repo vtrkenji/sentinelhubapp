@@ -1058,13 +1058,13 @@
           <h2 class="font-display text-4xl font-bold">Dois apps, uma segurança.</h2>
           <p class="text-zinc-500 mt-4 max-w-2xl mx-auto">
             O <b class="text-zinc-300">kTsentinel</b> é o app que você usa: vê câmeras, recebe alertas e controla tudo.
-            O <b class="text-zinc-300">Guard</b> fica num notebook Linux ligado em casa, vigiando as câmeras 24h.
+            O <b class="text-zinc-300">Guard</b> fica num PC em casa (Linux ou Windows), vigiando as câmeras 24h.
           </p>
         </div>
 
         <div class="grid md:grid-cols-[1fr_auto_1fr] gap-4 items-stretch max-w-4xl mx-auto mb-10">
           <div class="border border-white/[.08] bg-black/20 rounded-xl p-5 text-sm">
-            <div class="font-display font-semibold text-signal-400 mb-2">Guard · notebook em casa</div>
+            <div class="font-display font-semibold text-signal-400 mb-2">Guard · PC em casa</div>
             <ul class="text-zinc-400 space-y-1 list-disc pl-4">
               <li>Lê o RTSP das câmeras / DVR 24h</li>
               <li>Painel no notebook: ON/OFF, agenda e zonas no snapshot</li>
@@ -1088,7 +1088,7 @@
           <button id="tab-app" onclick="showTab('app')" role="tab"
             class="tab-btn px-5 py-2.5 rounded-lg font-bold text-sm border border-white/10">App kTsentinel</button>
           <button id="tab-guard" onclick="showTab('guard')" role="tab"
-            class="tab-btn px-5 py-2.5 rounded-lg font-bold text-sm border border-white/10">Guard (Linux)</button>
+            class="tab-btn px-5 py-2.5 rounded-lg font-bold text-sm border border-white/10">Guard</button>
         </div>
 
         <div id="panel-app">
@@ -1234,31 +1234,40 @@
               <div>
                 <h2 class="font-display text-4xl font-bold">kTsentinel Guard</h2>
                 <p class="text-zinc-500 text-lg mt-4 max-w-xl">
-                  O mesmo visual do app, no notebook: indicador ON/OFF, desenho de zonas no snapshot
-                  (retângulo ou ponto a ponto) e agenda. Roda em segundo plano no Linux
-                  (incluindo Fedora imutável — instala só no home).
+                  O mesmo visual do app, no PC de casa: indicador ON/OFF, desenho de zonas no snapshot
+                  (retângulo ou ponto a ponto) e agenda. Linux ou Windows. O push FCM continua saindo
+                  para o celular. No Linux imutável a instalação fica só no home.
                 </p>
                 <ol class="mt-5 text-sm text-zinc-400 list-decimal pl-5 space-y-1">
-                  <li>Baixe e extraia o pacote</li>
-                  <li>Rode <code class="font-mono text-zinc-300">./scripts/install.sh</code></li>
-                  <li>Configure câmeras e a chave Firebase só no notebook</li>
-                  <li>Abra <code class="font-mono text-zinc-300">http://IP-DO-NOTE:8765/</code> — neste PC não pede token</li>
-                  <li>No celular, o app arma/desarma e recebe os pushes</li>
+                  <li>Baixe o pacote do seu sistema e extraia</li>
+                  <li>Linux: <code class="font-mono text-zinc-300">./scripts/install.sh</code> — Windows: <code class="font-mono text-zinc-300">powershell -ExecutionPolicy Bypass -File .\scripts\install.ps1</code></li>
+                  <li>Configure câmeras e a chave Firebase só nesse PC</li>
+                  <li>Abra <code class="font-mono text-zinc-300">http://IP-DESSE-PC:8765/</code> — neste PC não pede token</li>
+                  <li>No celular, ou no app Windows, arme e desarme. O push chega no Android</li>
                 </ol>
                 <div class="flex items-center gap-2 mt-5">
                   <span class="w-1.5 h-1.5 rounded-full bg-online"></span>
-                  <span class="font-mono text-[10px] text-zinc-500">REPOSITÓRIO PRIVADO: entre no GitHub com sua conta para baixar.</span>
+                  <span class="font-mono text-[10px] text-zinc-500">VERSÃO 0.1.2 · Linux e Windows</span>
                 </div>
               </div>
-              <div class="grid gap-3">
-                <a href="https://github.com/vtrkenji/ktsentinel-guard/releases/download/guard-v0.1.0/ktsentinel-guard-linux.tar.gz"
-                  class="group min-w-[200px] border border-white/[.08] bg-black/20 hover:bg-white/[.05] rounded-xl p-5 transition">
+              <div class="grid sm:grid-cols-2 gap-3">
+                <a href="https://github.com/vtrkenji/ktsentinel-guard/releases/download/v0.1.2/ktsentinel-guard-0.1.2-windows.zip"
+                  class="group min-w-[180px] border border-white/[.08] bg-black/20 hover:bg-white/[.05] rounded-xl p-5 transition">
+                  <div class="flex justify-between">
+                    <i data-lucide="monitor" class="w-5 h-5 text-zinc-400 group-hover:text-signal-400 transition"></i>
+                    <i data-lucide="arrow-up-right" class="w-4 h-4 text-zinc-700 group-hover:text-white"></i>
+                  </div>
+                  <div class="font-display font-semibold mt-7">Guard para Windows</div>
+                  <div class="font-mono text-[9px] text-zinc-600 mt-1">.ZIP · v0.1.2</div>
+                </a>
+                <a href="https://github.com/vtrkenji/ktsentinel-guard/releases/download/v0.1.2/ktsentinel-guard-0.1.2-linux.tar.gz"
+                  class="group min-w-[180px] border border-white/[.08] bg-black/20 hover:bg-white/[.05] rounded-xl p-5 transition">
                   <div class="flex justify-between">
                     <i data-lucide="terminal" class="w-5 h-5 text-zinc-400 group-hover:text-signal-400 transition"></i>
                     <i data-lucide="arrow-up-right" class="w-4 h-4 text-zinc-700 group-hover:text-white"></i>
                   </div>
                   <div class="font-display font-semibold mt-7">Guard para Linux</div>
-                  <div class="font-mono text-[9px] text-zinc-600 mt-1">.TAR.GZ · v0.1.0</div>
+                  <div class="font-mono text-[9px] text-zinc-600 mt-1">.TAR.GZ · v0.1.2</div>
                 </a>
                 <a href="https://github.com/vtrkenji/ktsentinel-guard/releases"
                   class="text-center text-xs text-zinc-500 hover:text-white">Todas as versões do Guard</a>
